@@ -23,7 +23,7 @@ export default function Scenario2Assessment() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          scenarioId: scenario1Meta.id,
+          scenarioId: scenario2Meta.id,
           answers,
         }),
       });
