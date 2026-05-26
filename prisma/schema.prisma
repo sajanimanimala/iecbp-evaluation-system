@@ -26,3 +26,14 @@ model Answer {
 
   submission Submission @relation(fields: [submissionId], references: [id])
 }
+model ExamAttempt {
+  id Int @id @default(autoincrement())
+
+  start_time DateTime @default(now())
+
+  submit_time DateTime?
+
+  duration_minutes Float?
+
+  status String @default("started")
+}

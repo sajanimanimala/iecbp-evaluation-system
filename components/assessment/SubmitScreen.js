@@ -2,11 +2,198 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { isGarbageInput } from "../../utils/validation";
 
+
+// ── Mirrors AssessmentShell validation ──
+// REPLACE the current validateAnswer with this
+function validateAnswer(question, answer) {
+  if (!isAnswered(answer)) {
+    return `Q${question.number}: Answer is required`;
+  }
+
+  // SHORT TEXT VALIDATION
+  if (question.type === 'short_text') {
+    const text = String(answer).trim().toLowerCase();
+
+    if (!text) {
+      return `Q${question.number}: Answer is required`;
+    }
+
+    const words = text.split(/\s+/).filter(Boolean);
+
+    if (words.length < 15) {
+      return `Q${question.number}: Minimum 15 words required.`;
+    }
+
+    if (words.length > 40) {
+      return `Q${question.number}: Maximum 40 words allowed.`;
+    }
+
+    // repeated word spam
+    const uniqueWords = new Set(words);
+    const repetitionRatio = uniqueWords.size / words.length;
+
+    if (repetitionRatio < 0.65) {
+      return `Q${question.number}: Answer is too repetitive. Please provide a meaningful response.`;
+    }
+
+    // spam/chat words
+    const spamWords = [
+      'hey',
+      'hi',
+      'hii',
+      'hehe',
+      'haha',
+      'lol',
+      'test',
+      'asdf',
+      'qwerty',
+      'check',
+      'checking',
+      'error',
+      'hello'
+    ];
+
+    const spamCount = words.filter(word =>
+      spamWords.some(spam => word.includes(spam))
+    ).length;
+
+    if (spamCount >= 3) {
+      return `Q${question.number}: Casual or spam-like responses are not allowed.`;
+    }
+
+    if (isGarbageInput(text)) {
+      return `Q${question.number}: Please enter a meaningful answer.`;
+    }
+    // MULTI SELECT VALIDATION
+    // MULTI SELECT VALIDATION
+    // MULTI SELECT VALIDATION
+    if (question.type === 'multi_select') {
+      if (!Array.isArray(answer)) {
+        return `Q${question.number}: Please select required options.`;
+      }
+
+      const requiredSelections = question.maxSelections || 1;
+
+      if (answer.length < requiredSelections) {
+        return `Q${question.number}: Please select exactly ${requiredSelections} options.`;
+      }
+
+      if (answer.length > requiredSelections) {
+        return `Q${question.number}: You can select only ${requiredSelections} options.`;
+      }
+    }
+  }
+
+  // YES/NO REASON VALIDATION
+  if (question.type === 'yes_no') {
+    const reasoning = String(answer.reasoning || '').trim().toLowerCase();
+    const words = reasoning.split(/\s+/).filter(Boolean);
+
+    if (words.length < 15) {
+      return `Q${question.number}: Minimum 15 words required for reasoning.`;
+    }
+
+    if (words.length > 40) {
+      return `Q${question.number}: Maximum 40 words allowed for reasoning.`;
+    }
+
+    const uniqueWords = new Set(words);
+    const repetitionRatio = uniqueWords.size / words.length;
+
+    if (repetitionRatio < 0.65) {
+      return `Q${question.number}: Reasoning is too repetitive.`;
+    }
+
+    const spamWords = [
+      'hey',
+      'hi',
+      'hii',
+      'hehe',
+      'haha',
+      'lol',
+      'test',
+      'asdf',
+      'check',
+      'error'
+    ];
+
+    const spamCount = words.filter(word =>
+      spamWords.some(spam => word.includes(spam))
+    ).length;
+
+    if (spamCount >= 3) {
+      return `Q${question.number}: Meaningful reasoning required.`;
+    }
+  }
+
+  // MULTI SELECT VALIDATION
+  if (question.type === 'multi_select') {
+    if (!Array.isArray(answer)) {
+      return `Q${question.number}: Please select required options.`;
+    }
+
+    const minRequired = question.minSelections || 1;
+
+    if (answer.length < minRequired) {
+      return `Q${question.number}: Select at least ${minRequired} options.`;
+    }
+  }
+
+  // AUDIO / VIDEO
+  if (question.type === 'audio' || question.type === 'video') {
+    if (!answer?.response || String(answer.response).trim() === '') {
+      return `Q${question.number}: Response required`;
+    }
+  }
+
+  return null;
+}
+function revalidateAll(questions, answers) {
+  const errors = [];
+  const normalizedAnswers = {};
+
+  for (const q of questions) {
+    const answer = answers[q.id];
+
+    const err = validateAnswer(q, answer);
+    if (err) {
+      errors.push(err);
+      continue;
+    }
+
+    // only compare text answers
+    if (q.type === 'short_text') {
+      const normalized = String(answer)
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+
+      if (normalizedAnswers[normalized]) {
+        errors.push(
+          `Q${q.number}: Same answer already used in Q${normalizedAnswers[normalized]}`
+        );
+      } else {
+        normalizedAnswers[normalized] = q.number;
+      }
+    }
+  }
+
+  return errors;
+}
 function isAnswered(answer) {
   if (answer === undefined || answer === null) return false;
   if (typeof answer === 'string') return answer.trim().length > 0;
   if (Array.isArray(answer)) return answer.length > 0;
+  // FIXED - checks yes_no has both choice AND non-empty reasoning
+  if (
+    typeof answer === 'object' &&
+    'choice' in answer &&
+    'reasoning' in answer
+  ) {
+    return answer.choice && answer.reasoning && answer.reasoning.trim().length > 0;
+  }
   if (typeof answer === 'object') return Object.keys(answer).length > 0;
   return Boolean(answer);
 }
@@ -56,11 +243,11 @@ function getAnswerPreview(question, answer) {
     case 'drag_rank':
       return Array.isArray(answer)
         ? answer
-            .map((id, i) => {
-              const item = question.items?.find((it) => it.id === id);
-              return `${i + 1}. ${item?.label || id}`;
-            })
-            .join(' → ')
+          .map((id, i) => {
+            const item = question.items?.find((it) => it.id === id);
+            return `${i + 1}. ${item?.label || id}`;
+          })
+          .join(' → ')
         : null;
 
     case 'audio':
@@ -78,22 +265,100 @@ function getAnswerPreview(question, answer) {
   }
 }
 
-export default function SubmitScreen({ meta, questions, answers, onRestart }) {
+export default function SubmitScreen({ meta, questions, answers, onRestart, onBack, attemptId }) {
   const [phase, setPhase] = useState('review'); // 'review' | 'confirm' | 'success'
   const [submitting, setSubmitting] = useState(false);
-
+  const [submitError, setSubmitError] = useState('');
   const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length;
   const unansweredCount = questions.length - answeredCount;
   const completionPct = Math.round((answeredCount / questions.length) * 100);
+  const [showFastSubmitWarning, setShowFastSubmitWarning] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
 
-  const handleSubmit = () => {
-    setSubmitting(true);
-    setTimeout(() => {
+  const handleSubmit = async () => {
+    // ── Re-validate all answers before touching the API ──
+    const errors = revalidateAll(questions, answers);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
       setSubmitting(false);
-      setPhase('success');
-    }, 2200);
-  };
+      return;
+    }
+    setValidationErrors([]);
 
+    setSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const res = await fetch('/api/assessment/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId }),
+      });
+
+      const data = await res.json();
+
+      if (data.tooFast) {
+        setShowFastSubmitWarning(true);
+        setSubmitting(false);
+        return;
+      }
+
+      if (!res.ok) {
+        setSubmitError(data.message || 'Submission blocked');
+        setSubmitting(false);
+        return;
+      }
+
+      const saveRes = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: meta.id, answers, attemptId }),
+      });
+
+      if (!saveRes.ok) {
+        setSubmitError('Failed to save answers');
+        setSubmitting(false);
+        return;
+      }
+
+      setPhase('success');
+    } catch (err) {
+      setSubmitError('Unexpected error during submission');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  const handleForceSubmit = async () => {
+    try {
+      setSubmitting(true);
+
+      const saveRes = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          scenarioId: meta.id,
+          answers,
+          attemptId
+        }),
+      });
+
+      if (!saveRes.ok) {
+        setSubmitError('Failed to save answers');
+        setSubmitting(false);
+        return;
+      }
+
+      setShowFastSubmitWarning(false);
+      setPhase('success');
+
+    } catch (err) {
+      setSubmitError('Unexpected error during submission');
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div style={{ minHeight: '100vh' }}>
       {/* Navbar */}
@@ -318,12 +583,52 @@ export default function SubmitScreen({ meta, questions, answers, onRestart }) {
                   You can still submit but unanswered items will be marked incomplete.
                 </p>
               )}
+              {validationErrors.length > 0 && (
+                <div style={{
+                  marginTop: '1.25rem',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  background: 'rgba(248,113,113,0.07)',
+                  border: '1px solid rgba(248,113,113,0.22)',
+                  textAlign: 'left',
+                }}>
+                  <div style={{
+                    fontSize: '11px', fontWeight: 700,
+                    color: '#F87171', marginBottom: '8px', letterSpacing: '0.5px',
+                  }}>
+                    ⚠ FIX BEFORE SUBMITTING
+                  </div>
+                  <ul style={{ margin: 0, padding: '0 0 0 16px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {validationErrors.map((err, i) => (
+                      <li key={i} style={{ fontSize: '13px', color: '#FCA5A5', lineHeight: 1.5 }}>
+                        {err}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {submitError && (
+                <div
+                  style={{
+                    marginTop: '1rem',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: 'rgba(248,113,113,0.08)',
+                    border: '1px solid rgba(248,113,113,0.2)',
+                    color: '#F87171',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠ {submitError}
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setPhase('review')}
+                  onClick={() => { setPhase('review'); setValidationErrors([]); setSubmitError(''); }}
                   style={{
                     flex: 1, padding: '13px',
                     background: 'rgba(255,255,255,0.04)',
@@ -620,30 +925,168 @@ export default function SubmitScreen({ meta, questions, answers, onRestart }) {
                 </div>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.03, boxShadow: '0 0 32px rgba(99,102,241,0.45)' }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setPhase('confirm')}
+              <div
                 style={{
-                  padding: '13px 28px', flexShrink: 0,
-                  background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
-                  border: 'none', borderRadius: '14px', cursor: 'pointer',
-                  fontSize: '14px', fontWeight: 700, color: '#fff',
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  boxShadow: '0 6px 24px rgba(99,102,241,0.3)',
-                  display: 'flex', alignItems: 'center', gap: '8px',
+                  display: 'flex',
+                  gap: '12px',
+                  justifyContent: 'flex-end',
                 }}
               >
-                Submit Assessment
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={onBack}
+                  style={{
+                    padding: '13px 24px',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: '#CBD5E1',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                  }}
+                >
+                  ← Back to Assessment
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.03, boxShadow: '0 0 32px rgba(99,102,241,0.45)' }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setPhase('confirm')}
+                  style={{
+                    padding: '13px 28px',
+                    flexShrink: 0,
+                    background: 'linear-gradient(135deg, #6366F1, #7C3AED)',
+                    border: 'none',
+                    borderRadius: '14px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    color: '#fff',
+                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    boxShadow: '0 6px 24px rgba(99,102,241,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  Submit Assessment
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                </motion.button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+      {showFastSubmitWarning && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.65)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #1E293B 0%, #111827 100%)',
+              border: '1px solid rgba(251,191,36,0.25)',
+              borderRadius: '24px',
+              padding: '32px',
+              width: '430px',
+              boxShadow: '0 25px 80px rgba(0,0,0,0.5)',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                background: 'rgba(251,191,36,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                fontSize: '34px',
+              }}
+            >
+              ⚠️
+            </div>
+
+            <h3
+              style={{
+                color: '#fff',
+                fontSize: '24px',
+                fontWeight: 700,
+                marginBottom: '14px',
+              }}
+            >
+              Quick Submission?
+            </h3>
+
+            <p
+              style={{
+                color: '#CBD5E1',
+                fontSize: '15px',
+                lineHeight: 1.7,
+                marginBottom: '28px',
+              }}
+            >
+              You completed this assessment unusually quickly.
+              <br />
+              Are you sure you want to submit now?
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '14px',
+              }}
+            >
+              <button
+                onClick={() => setShowFastSubmitWarning(false)}
+                style={{
+                  padding: '12px 22px',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: '#E2E8F0',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Go Back
+              </button>
+
+              <button
+                onClick={handleForceSubmit}
+                style={{
+                  padding: '12px 22px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #F59E0B, #F97316)',
+                  color: '#fff',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 10px 25px rgba(249,115,22,0.35)',
+                }}
+              >
+                Submit Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
