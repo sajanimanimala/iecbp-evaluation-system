@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 
 export default function ShortTextQuestion({ question, value, onChange }) {
   const [focused, setFocused] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
   const wordCount = value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
   const hasContent = value && value.trim().length > 0;
 
@@ -119,7 +120,27 @@ export default function ShortTextQuestion({ question, value, onChange }) {
           </span>
         </div>
       </div>
-
+      {validationMessage && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            marginTop: '0.75rem',
+            padding: '10px 14px',
+            background: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span style={{ fontSize: '13px' }}>⚠️</span>
+          <span style={{ fontSize: '12px', color: '#FCA5A5', fontWeight: 500 }}>
+            {validationMessage}
+          </span>
+        </motion.div>
+      )}
       {/* writing prompt hint */}
       {!hasContent && !focused && (
         <motion.div
@@ -137,7 +158,7 @@ export default function ShortTextQuestion({ question, value, onChange }) {
         >
           <span style={{ fontSize: '13px' }}>💡</span>
           <span style={{ fontSize: '12px', color: '#64748B', lineHeight: 1.5 }}>
-            Click the field above and share your thoughts. There is no word limit — think thoroughly.
+            Click the field above and share your thoughts. Write between 15 and 40 meaningful words — think thoroughly.
           </span>
         </motion.div>
       )}

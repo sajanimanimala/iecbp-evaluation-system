@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AssessmentShell from '../../../components/assessment/AssessmentShell';
 import SubmitScreen from '../../../components/assessment/SubmitScreen';
@@ -9,6 +9,27 @@ import { scenario6Questions, scenario6Meta } from '../../../data/scenario6Questi
 export default function Scenario6Assessment() {
   const [phase, setPhase] = useState('assessment');
   const [answers, setAnswers] = useState({});
+  const [attemptId, setAttemptId] = useState(null);
+
+  useEffect(() => {
+    const startExamAttempt = async () => {
+      try {
+        const response = await fetch('/api/assessment/start', {
+          method: 'POST',
+        });
+
+        const data = await response.json();
+
+        if (data.attemptId) {
+          setAttemptId(data.attemptId);
+        }
+      } catch (error) {
+        console.error('Failed to start attempt', error);
+      }
+    };
+
+    startExamAttempt();
+  }, []);
 
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -26,9 +47,9 @@ export default function Scenario6Assessment() {
           answers,
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (data.success) {
         setPhase('submit');
       } else {
@@ -43,7 +64,9 @@ export default function Scenario6Assessment() {
   const handleRestart = () => {
     window.location.href = '/';
   };
-
+  const handleBackToAssessment = () => {
+    setPhase('assessment');
+  };
   return (
     <div
       style={{
@@ -95,6 +118,7 @@ export default function Scenario6Assessment() {
                 answers={answers}
                 onAnswer={handleAnswer}
                 onFinish={handleFinish}
+                attemptId={attemptId}
               />
             </motion.div>
           ) : (
@@ -110,6 +134,8 @@ export default function Scenario6Assessment() {
                 questions={scenario6Questions}
                 answers={answers}
                 onRestart={handleRestart}
+                onBack={handleBackToAssessment}
+                attemptId={attemptId}
               />
             </motion.div>
           )}

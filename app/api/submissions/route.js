@@ -5,16 +5,15 @@ const prisma = new PrismaClient();
 export async function POST(req) {
   try {
     const body = await req.json();
-
     const { scenarioId, answers } = body;
 
     const submission = await prisma.submission.create({
-  data: {
-    scenarioId,
-   submittedAt: new Date().toLocaleString('en-IN', {
-  timeZone: 'Asia/Kolkata',
-}),
-  },
+      data: {
+        scenarioId,
+        submittedAt: new Date().toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+        }),
+      },
     });
 
     const formattedAnswers = Object.entries(answers).map(
@@ -36,6 +35,7 @@ export async function POST(req) {
       success: true,
       submissionId: submission.id,
     });
+
   } catch (error) {
     console.error(error);
 

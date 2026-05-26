@@ -1,5 +1,5 @@
 'use client';
-
+import { isGarbageInput } from "../../utils/validation";
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QuestionRenderer from './QuestionRenderer';
@@ -12,9 +12,32 @@ function formatTime(seconds) {
 
 function isAnswered(answer) {
   if (answer === undefined || answer === null) return false;
-  if (typeof answer === 'string') return answer.trim().length > 0;
-  if (Array.isArray(answer)) return answer.length > 0;
-  if (typeof answer === 'object') return Object.keys(answer).length > 0;
+
+  if (typeof answer === 'string') {
+    return answer.trim().length > 0;
+  }
+
+  if (Array.isArray(answer)) {
+    return answer.length > 0;
+  }
+
+  // yes/no question validation
+  if (
+    typeof answer === 'object' &&
+    'choice' in answer &&
+    'reasoning' in answer
+  ) {
+    return (
+      answer.choice &&
+      answer.reasoning &&
+      answer.reasoning.trim().length > 0
+    );
+  }
+
+  if (typeof answer === 'object') {
+    return Object.keys(answer).length > 0;
+  }
+
   return Boolean(answer);
 }
 
@@ -23,34 +46,33 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
   const [timeLeft, setTimeLeft] = useState(meta.minutes * 60);
   const [showWarning, setShowWarning] = useState(false);
   const [direction, setDirection] = useState(1);
-  const [showUnansweredError, setShowUnansweredError] = useState(false);
-
+  const [validationError, setValidationError] = useState('');
   const totalQuestions = questions.length;
- const levelThemes = {
-  Beginner: {
-    primary: '#22C55E',
-    secondary: '#2DD4BF',
-    accent: '#67E8F9',
-    glow: '#A7F3D0',
-  },
+  const levelThemes = {
+    Beginner: {
+      primary: '#22C55E',
+      secondary: '#2DD4BF',
+      accent: '#67E8F9',
+      glow: '#A7F3D0',
+    },
 
-  Intermediate: {
-    primary: '#3B82F6',
-    secondary: '#06B6D4',
-    accent: '#8B5CF6',
-    glow: '#93C5FD',
-  },
+    Intermediate: {
+      primary: '#3B82F6',
+      secondary: '#06B6D4',
+      accent: '#8B5CF6',
+      glow: '#93C5FD',
+    },
 
-  Advanced: {
-    primary: '#F97316',
-    secondary: '#EC4899',
-    accent: '#7C3AED',
-    glow: '#6366F1',
-  },
-};
+    Advanced: {
+      primary: '#F97316',
+      secondary: '#EC4899',
+      accent: '#7C3AED',
+      glow: '#6366F1',
+    },
+  };
 
-const theme =
-  levelThemes[meta.level] || levelThemes.Advanced;
+  const theme =
+    levelThemes[meta.level] || levelThemes.Advanced;
   const currentQuestion = questions[currentIndex];
   const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length;
   const progressPercent = ((currentIndex) / totalQuestions) * 100;
@@ -75,13 +97,64 @@ const theme =
   }, [timeLeft === 300]);
 
   const goNext = useCallback(() => {
-    if (!isAnswered(answers[currentQuestion.id])) {
-      setShowUnansweredError(true);
-      setTimeout(() => setShowUnansweredError(false), 3000);
+    const answer = answers[currentQuestion.id];
+
+    // Empty answer check
+    if (!isAnswered(answer)) {
+      setValidationError('Please answer this question before continuing.');
+      setTimeout(() => setValidationError(''), 3000);
       return;
     }
-    setShowUnansweredError(false);
-    if (isLast) { onFinish(); return; }
+
+    // Short text validations
+    if (currentQuestion.type === 'short_text') {
+      const words = answer.trim().split(/\s+/).filter(Boolean);
+
+      // Minimum words
+      if (words.length < 15) {
+        setValidationError('Minimum 15 words required.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+
+      // Maximum words
+      if (words.length > 40) {
+        setValidationError('Maximum 40 words allowed.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+      if (isGarbageInput(answer)) {
+        setValidationError('Please enter a meaningful answer.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+    }
+    if (currentQuestion.type === 'yes_no') {
+      const words = answer.reasoning.trim().split(/\s+/).filter(Boolean);
+
+      if (words.length < 15) {
+        setValidationError('Minimum 15 words required for reasoning.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+
+      if (words.length > 40) {
+        setValidationError('Maximum 40 words allowed for reasoning.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+      if (isGarbageInput(answer.reasoning)) {
+        setValidationError('Please enter meaningful reasoning.');
+        setTimeout(() => setValidationError(''), 3000);
+        return;
+      }
+    }
+    setValidationError('');
+    if (isLast) {
+      onFinish();
+      return;
+    }
+
     setDirection(1);
     setCurrentIndex((i) => i + 1);
   }, [answers, currentQuestion, isLast, onFinish]);
@@ -90,13 +163,13 @@ const theme =
     if (currentIndex === 0) return;
     setDirection(-1);
     setCurrentIndex((i) => i - 1);
-    setShowUnansweredError(false);
+    setValidationError('')
   }, [currentIndex]);
 
   const jumpTo = (index) => {
     setDirection(index > currentIndex ? 1 : -1);
     setCurrentIndex(index);
-    setShowUnansweredError(false);
+    setValidationError('')
   };
 
   return (
@@ -260,9 +333,9 @@ const theme =
               <div
                 style={{
                   width: '36px', height: '36px', borderRadius: '10px',
-                 background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-boxShadow: `0 0 18px ${theme.primary}55`,
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: `0 0 18px ${theme.primary}55`,
                   flexShrink: 0,
                 }}
               >
@@ -313,7 +386,7 @@ boxShadow: `0 0 18px ${theme.primary}55`,
 
           {/* Error: must answer */}
           <AnimatePresence>
-            {showUnansweredError && (
+            {validationError && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -329,7 +402,7 @@ boxShadow: `0 0 18px ${theme.primary}55`,
               >
                 <span style={{ fontSize: '14px' }}>⚠️</span>
                 <span style={{ fontSize: '13px', color: '#FCA5A5', fontWeight: 500 }}>
-                  Please answer this question before continuing.
+                  {validationError}
                 </span>
               </motion.div>
             )}
@@ -417,13 +490,13 @@ boxShadow: `0 0 18px ${theme.primary}55`,
                     background: active
                       ? `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
                       : answered
-                      ? 'rgba(74,222,128,0.12)'
-                      : 'rgba(255,255,255,0.04)',
+                        ? 'rgba(74,222,128,0.12)'
+                        : 'rgba(255,255,255,0.04)',
                     border: active
                       ? 'none'
                       : answered
-                      ? '1px solid rgba(74,222,128,0.3)'
-                      : '1px solid rgba(255,255,255,0.06)',
+                        ? '1px solid rgba(74,222,128,0.3)'
+                        : '1px solid rgba(255,255,255,0.06)',
                     color: active ? '#fff' : answered ? '#4ADE80' : '#475569',
                     fontSize: '13px', fontWeight: 700,
                     boxShadow: active ? `0 0 16px ${theme.primary}66` : 'none',
