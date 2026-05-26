@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import AssessmentShell from '../../../components/assessment/AssessmentShell';
@@ -9,42 +9,67 @@ import { scenario1Questions, scenario1Meta } from '../../../data/scenario1Questi
 export default function Scenario1Assessment() {
   const [phase, setPhase] = useState('assessment'); // 'assessment' | 'submit'
   const [answers, setAnswers] = useState({});
+  const [attemptId, setAttemptId] = useState(null);
+
   const router = useRouter();
+  useEffect(() => {
+    const startExamAttempt = async () => {
+      const res = await fetch('/api/assessment/start', {
+        method: 'POST'
+      });
+
+      const data = await res.json();
+      console.log("START API RESPONSE FULL:", JSON.stringify(data));
+      setAttemptId(data.attemptId);
+      console.log("Scenario attemptId set:", data.attemptId);
+    };
+
+    startExamAttempt();
+
+  }, []);
+
 
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
   const handleFinish = async () => {
-  try {
-    const response = await fetch('/api/submissions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        scenarioId: scenario1Meta.id,
-        answers,
-      }),
-    });
+    try {
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          scenarioId: scenario1Meta.id,
+          answers,
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data.success) {
-      setPhase('submit');
-    } else {
-      alert('Failed to save submission');
+      if (data.success) {
+        if (!attemptId) {
+          alert("Exam session not initialized. Refresh and try again.");
+          return;
+        }
+
+        setPhase('submit');
+      } else {
+        alert('Failed to save submission');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Something went wrong');
     }
-  } catch (error) {
-    console.error(error);
-    alert('Something went wrong');
-  }
-};
+  };
 
   const handleRestart = () => {
-  window.location.href = '/';
-};
-
+    window.location.href = '/';
+  };
+  const handleBackToAssessment = () => {
+    setPhase('assessment');
+  };
   return (
     <div
       style={{
@@ -113,6 +138,8 @@ export default function Scenario1Assessment() {
                 questions={scenario1Questions}
                 answers={answers}
                 onRestart={handleRestart}
+                onBack={handleBackToAssessment}
+                attemptId={attemptId}
               />
             </motion.div>
           )}

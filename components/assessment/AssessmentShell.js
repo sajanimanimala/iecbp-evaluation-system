@@ -1,5 +1,5 @@
 'use client';
-
+import { isGarbageInput } from "../../utils/validation";
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QuestionRenderer from './QuestionRenderer';
@@ -14,6 +14,17 @@ function isAnswered(answer) {
   if (answer === undefined || answer === null) return false;
   if (typeof answer === 'string') return answer.trim().length > 0;
   if (Array.isArray(answer)) return answer.length > 0;
+  if (
+    typeof answer === 'object' &&
+    'choice' in answer &&
+    'reasoning' in answer
+  ) {
+    return (
+      answer.choice &&
+      answer.reasoning &&
+      answer.reasoning.trim().length > 0
+    );
+  }
   if (typeof answer === 'object') return Object.keys(answer).length > 0;
   return Boolean(answer);
 }
@@ -23,40 +34,23 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
   const [timeLeft, setTimeLeft] = useState(meta.minutes * 60);
   const [showWarning, setShowWarning] = useState(false);
   const [direction, setDirection] = useState(1);
-  const [showUnansweredError, setShowUnansweredError] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const totalQuestions = questions.length;
- const levelThemes = {
-  Beginner: {
-    primary: '#22C55E',
-    secondary: '#2DD4BF',
-    accent: '#67E8F9',
-    glow: '#A7F3D0',
-  },
 
-  Intermediate: {
-    primary: '#3B82F6',
-    secondary: '#06B6D4',
-    accent: '#8B5CF6',
-    glow: '#93C5FD',
-  },
+  const levelThemes = {
+    Beginner: { primary: '#22C55E', secondary: '#2DD4BF', accent: '#67E8F9', glow: '#A7F3D0' },
+    Intermediate: { primary: '#3B82F6', secondary: '#06B6D4', accent: '#8B5CF6', glow: '#93C5FD' },
+    Advanced: { primary: '#F97316', secondary: '#EC4899', accent: '#7C3AED', glow: '#6366F1' },
+  };
 
-  Advanced: {
-    primary: '#F97316',
-    secondary: '#EC4899',
-    accent: '#7C3AED',
-    glow: '#6366F1',
-  },
-};
-
-const theme =
-  levelThemes[meta.level] || levelThemes.Advanced;
+  const theme = levelThemes[meta.level] || levelThemes.Advanced;
   const currentQuestion = questions[currentIndex];
   const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length;
-  const progressPercent = ((currentIndex) / totalQuestions) * 100;
   const isLast = currentIndex === totalQuestions - 1;
-  const isTimeLow = timeLeft <= 300; // 5 min warning
+  const isTimeLow = timeLeft <= 300;
 
+  // ── Timer ──
   useEffect(() => {
     if (timeLeft <= 0) return;
     const interval = setInterval(() => {
@@ -68,36 +62,135 @@ const theme =
     return () => clearInterval(interval);
   }, []);
 
+  // ── 5-min warning toast ──
   useEffect(() => {
-    if (timeLeft === 300) setShowWarning(true);
+    if (timeLeft !== 300) return;
+    setShowWarning(true);
     const timer = setTimeout(() => setShowWarning(false), 4000);
     return () => clearTimeout(timer);
-  }, [timeLeft === 300]);
+  }, [timeLeft]);
 
+  // ── Validate current answer ──
+  const validateCurrent = useCallback(() => {
+    const answer = answers[currentQuestion.id];
+
+    if (!isAnswered(answer)) {
+      return 'Please answer this question before continuing.';
+    }
+
+    // SHORT TEXT
+    if (currentQuestion.type === 'short_text') {
+      const text = String(answer).trim().toLowerCase();
+      const words = text.split(/\s+/).filter(Boolean);
+
+      if (words.length < 15) {
+        return 'Minimum 15 words required.';
+      }
+
+      if (words.length > 40) {
+        return 'Maximum 40 words allowed.';
+      }
+
+      const uniqueWords = new Set(words);
+      const repetitionRatio = uniqueWords.size / words.length;
+
+      if (repetitionRatio < 0.65) {
+        return 'Response is too repetitive.';
+      }
+
+      const spamWords = [
+        'hey',
+        'hi',
+        'hii',
+        'hehe',
+        'haha',
+        'lol',
+        'test',
+        'asdf',
+        'qwerty',
+        'check',
+        'checking',
+        'error',
+        'hello'
+      ];
+
+      const spamCount = words.filter(word =>
+        spamWords.some(spam => word.includes(spam))
+      ).length;
+
+      if (spamCount >= 3) {
+        return 'Meaningful professional response required.';
+      }
+
+      if (isGarbageInput(text)) {
+        return 'Please enter a meaningful answer.';
+      }
+    }
+
+    // YES / NO
+    if (currentQuestion.type === 'yes_no') {
+      const reasoning = String(answer.reasoning || '').trim().toLowerCase();
+      const words = reasoning.split(/\s+/).filter(Boolean);
+
+      if (words.length < 15) {
+        return 'Minimum 15 words required for reasoning.';
+      }
+
+      if (words.length > 40) {
+        return 'Maximum 40 words allowed for reasoning.';
+      }
+
+      if (isGarbageInput(reasoning)) {
+        return 'Please enter meaningful reasoning.';
+      }
+    }
+
+    // MULTI SELECT
+    if (currentQuestion.type === 'multi_select') {
+      const requiredSelections = currentQuestion.maxSelections || 1;
+
+      if (!Array.isArray(answer) || answer.length !== requiredSelections) {
+        return `Please select exactly ${requiredSelections} options.`;
+      }
+    }
+
+    return null;
+  }, [answers, currentQuestion]);
+
+  // ── Next / Submit ──
   const goNext = useCallback(() => {
-    if (!isAnswered(answers[currentQuestion.id])) {
-      setShowUnansweredError(true);
-      setTimeout(() => setShowUnansweredError(false), 3000);
+    const error = validateCurrent();
+    if (error) {
+      setValidationError(error);
+      setTimeout(() => setValidationError(''), 3000);
       return;
     }
-    setShowUnansweredError(false);
-    if (isLast) { onFinish(); return; }
+
+    setValidationError('');
+
+    if (isLast) {
+      onFinish();   // hand off to SubmitScreen
+      return;
+    }
+
     setDirection(1);
     setCurrentIndex((i) => i + 1);
-  }, [answers, currentQuestion, isLast, onFinish]);
+  }, [validateCurrent, isLast, onFinish]);
 
+  // ── Prev ──
   const goPrev = useCallback(() => {
     if (currentIndex === 0) return;
     setDirection(-1);
     setCurrentIndex((i) => i - 1);
-    setShowUnansweredError(false);
+    setValidationError('');
   }, [currentIndex]);
 
-  const jumpTo = (index) => {
+  // ── Jump ──
+  const jumpTo = useCallback((index) => {
     setDirection(index > currentIndex ? 1 : -1);
     setCurrentIndex(index);
-    setShowUnansweredError(false);
-  };
+    setValidationError('');
+  }, [currentIndex]);
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -108,30 +201,25 @@ const theme =
           background: 'rgba(18,24,38,0.85)',
           backdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(99,102,241,0.12)',
-          padding: '0 2rem',
-          height: '64px',
+          padding: '0 2rem', height: '64px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: '1rem',
         }}
       >
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-          <div
-            style={{
-              width: '38px', height: '38px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(124,58,237,0.15))',
-              border: '1.5px solid rgba(99,102,241,0.35)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 14px rgba(99,102,241,0.2)',
-            }}
-          >
-            <span
-              style={{
-                fontWeight: 700, fontSize: '10px',
-                background: 'linear-gradient(135deg, #a5b4fc, #F97316)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}
-            >IE</span>
+          <div style={{
+            width: '38px', height: '38px', borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(124,58,237,0.15))',
+            border: '1.5px solid rgba(99,102,241,0.35)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 14px rgba(99,102,241,0.2)',
+          }}>
+            <span style={{
+              fontWeight: 700, fontSize: '10px',
+              background: 'linear-gradient(135deg, #a5b4fc, #F97316)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            }}>IE</span>
           </div>
           <div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#F8FAFC', letterSpacing: '-0.2px' }}>
@@ -143,7 +231,7 @@ const theme =
           </div>
         </div>
 
-        {/* Progress bar (center) */}
+        {/* Progress bar */}
         <div style={{ flex: 1, maxWidth: '480px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
             <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 500 }}>
@@ -153,12 +241,7 @@ const theme =
               {answeredCount}/{totalQuestions} answered
             </span>
           </div>
-          <div
-            style={{
-              height: '4px', background: 'rgba(255,255,255,0.06)',
-              borderRadius: '999px', overflow: 'hidden',
-            }}
-          >
+          <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
             <motion.div
               style={{
                 height: '100%',
@@ -172,26 +255,22 @@ const theme =
         </div>
 
         {/* Timer */}
-        <div
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '7px 16px', borderRadius: '999px',
-            background: isTimeLow ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.08)',
-            border: isTimeLow ? '1px solid rgba(239,68,68,0.3)' : `1px solid ${theme.primary}40`,
-            transition: 'all 0.3s ease',
-          }}
-        >
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '7px 16px', borderRadius: '999px',
+          background: isTimeLow ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.08)',
+          border: isTimeLow ? '1px solid rgba(239,68,68,0.3)' : `1px solid ${theme.primary}40`,
+          transition: 'all 0.3s ease',
+        }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
             stroke={isTimeLow ? '#EF4444' : '#6366F1'} strokeWidth="2.5">
             <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
-          <span
-            style={{
-              fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px',
-              color: isTimeLow ? '#EF4444' : '#CBD5E1',
-              fontVariantNumeric: 'tabular-nums',
-            }}
-          >
+          <span style={{
+            fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px',
+            color: isTimeLow ? '#EF4444' : '#CBD5E1',
+            fontVariantNumeric: 'tabular-nums',
+          }}>
             {formatTime(timeLeft)}
           </span>
         </div>
@@ -224,48 +303,31 @@ const theme =
       </AnimatePresence>
 
       {/* ── BODY ── */}
-      <div
-        style={{
-          flex: 1,
-          maxWidth: '1100px', width: '100%',
-          margin: '0 auto',
-          padding: '2.5rem 2rem',
-          display: 'flex',
-          gap: '2rem',
-          alignItems: 'flex-start',
-        }}
-      >
+      <div style={{
+        flex: 1, maxWidth: '1100px', width: '100%',
+        margin: '0 auto', padding: '2.5rem 2rem',
+        display: 'flex', gap: '2rem', alignItems: 'flex-start',
+      }}>
         {/* MAIN QUESTION AREA */}
-        <div>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {/* Question header card */}
-          <motion.div
-            style={{
-              background: 'linear-gradient(145deg, #1E2A40, #24324A)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: '24px',
-              padding: '2.25rem',
-              marginBottom: '1.5rem',
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px',
-                background: `linear-gradient(90deg, transparent, ${theme.primary}88, transparent)`,
-              }}
-            />
-            {/* Q label */}
+          <motion.div style={{
+            background: 'linear-gradient(145deg, #1E2A40, #24324A)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            borderRadius: '24px', padding: '2.25rem',
+            marginBottom: '1.5rem', position: 'relative', overflow: 'hidden',
+          }}>
+            <div style={{
+              position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px',
+              background: `linear-gradient(90deg, transparent, ${theme.primary}88, transparent)`,
+            }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.25rem' }}>
-              <div
-                style={{
-                  width: '36px', height: '36px', borderRadius: '10px',
-                 background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
-display: 'flex', alignItems: 'center', justifyContent: 'center',
-boxShadow: `0 0 18px ${theme.primary}55`,
-                  flexShrink: 0,
-                }}
-              >
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 0 18px ${theme.primary}55`, flexShrink: 0,
+              }}>
                 <span style={{ fontSize: '13px', fontWeight: 800, color: '#fff' }}>
                   Q{currentQuestion.number}
                 </span>
@@ -273,7 +335,6 @@ boxShadow: `0 0 18px ${theme.primary}55`,
               <QuestionTypeBadge type={currentQuestion.type} />
             </div>
 
-            {/* Question text */}
             <AnimatePresence mode="wait">
               <motion.h2
                 key={currentQuestion.id}
@@ -285,8 +346,7 @@ boxShadow: `0 0 18px ${theme.primary}55`,
                   fontFamily: "'Playfair Display', serif",
                   fontSize: 'clamp(1.1rem, 2vw, 1.35rem)',
                   fontWeight: 700, color: '#F8FAFC',
-                  lineHeight: 1.55, margin: 0,
-                  letterSpacing: '-0.2px',
+                  lineHeight: 1.55, margin: 0, letterSpacing: '-0.2px',
                 }}
               >
                 {currentQuestion.question}
@@ -311,16 +371,15 @@ boxShadow: `0 0 18px ${theme.primary}55`,
             </motion.div>
           </AnimatePresence>
 
-          {/* Error: must answer */}
+          {/* Validation error */}
           <AnimatePresence>
-            {showUnansweredError && (
+            {validationError && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 style={{
-                  marginTop: '1rem',
-                  padding: '12px 16px',
+                  marginTop: '1rem', padding: '12px 16px',
                   background: 'rgba(239,68,68,0.08)',
                   border: '1px solid rgba(239,68,68,0.25)',
                   borderRadius: '12px',
@@ -329,7 +388,7 @@ boxShadow: `0 0 18px ${theme.primary}55`,
               >
                 <span style={{ fontSize: '14px' }}>⚠️</span>
                 <span style={{ fontSize: '13px', color: '#FCA5A5', fontWeight: 500 }}>
-                  Please answer this question before continuing.
+                  {validationError}
                 </span>
               </motion.div>
             )}
@@ -370,8 +429,7 @@ boxShadow: `0 0 18px ${theme.primary}55`,
                 background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
                 border: 'none', borderRadius: '14px', cursor: 'pointer',
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: '14px', fontWeight: 700,
-                color: '#fff',
+                fontSize: '14px', fontWeight: 700, color: '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 boxShadow: `0 6px 24px ${theme.primary}50`,
               }}
@@ -379,25 +437,21 @@ boxShadow: `0 0 18px ${theme.primary}55`,
               {isLast ? 'Review & Submit' : 'Next Question'}
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 {isLast
-                  ? <><polyline points="20 6 9 17 4 12" /></>
+                  ? <polyline points="20 6 9 17 4 12" />
                   : <><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>}
               </svg>
             </motion.button>
           </div>
         </div>
 
-        {/* SIDEBAR — question dot navigator */}
-        <div
-          style={{
-            background: 'linear-gradient(145deg, #1E2A40, #24324A)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: '20px',
-            padding: '1.5rem',
-            width: '200px',
-            flexShrink: 0,
-            position: 'sticky', top: '80px',
-          }}
-        >
+        {/* SIDEBAR */}
+        <div style={{
+          background: 'linear-gradient(145deg, #1E2A40, #24324A)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: '20px', padding: '1.5rem',
+          width: '200px', flexShrink: 0,
+          position: 'sticky', top: '80px',
+        }}>
           <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.7px', color: '#64748B', marginBottom: '1.25rem' }}>
             QUESTIONS
           </div>
@@ -413,17 +467,12 @@ boxShadow: `0 0 18px ${theme.primary}55`,
                   onClick={() => jumpTo(i)}
                   style={{
                     width: '100%', aspectRatio: '1',
-                    borderRadius: '10px', border: 'none', cursor: 'pointer',
+                    borderRadius: '10px', cursor: 'pointer',
                     background: active
                       ? `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
-                      : answered
-                      ? 'rgba(74,222,128,0.12)'
-                      : 'rgba(255,255,255,0.04)',
-                    border: active
-                      ? 'none'
-                      : answered
-                      ? '1px solid rgba(74,222,128,0.3)'
-                      : '1px solid rgba(255,255,255,0.06)',
+                      : answered ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: active ? 'none'
+                      : answered ? '1px solid rgba(74,222,128,0.3)' : '1px solid rgba(255,255,255,0.06)',
                     color: active ? '#fff' : answered ? '#4ADE80' : '#475569',
                     fontSize: '13px', fontWeight: 700,
                     boxShadow: active ? `0 0 16px ${theme.primary}66` : 'none',
@@ -438,18 +487,16 @@ boxShadow: `0 0 18px ${theme.primary}55`,
           </div>
 
           <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})` }} />
-              <span style={{ fontSize: '11px', color: '#64748B' }}>Current</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: 'rgba(74,222,128,0.3)', border: '1px solid rgba(74,222,128,0.4)' }} />
-              <span style={{ fontSize: '11px', color: '#64748B' }}>Answered</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }} />
-              <span style={{ fontSize: '11px', color: '#64748B' }}>Unanswered</span>
-            </div>
+            {[
+              { bg: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`, label: 'Current' },
+              { bg: 'rgba(74,222,128,0.3)', border: '1px solid rgba(74,222,128,0.4)', label: 'Answered' },
+              { bg: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', label: 'Unanswered' },
+            ].map(({ bg, border, label }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: bg, border }} />
+                <span style={{ fontSize: '11px', color: '#64748B' }}>{label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -469,15 +516,13 @@ function QuestionTypeBadge({ type }) {
   };
   const meta = map[type] || { label: 'Question', color: '#94A3B8' };
   return (
-    <div
-      style={{
-        padding: '3px 12px', borderRadius: '999px',
-        background: `${meta.color}15`,
-        border: `1px solid ${meta.color}35`,
-        fontSize: '11px', fontWeight: 600,
-        color: meta.color, letterSpacing: '0.4px',
-      }}
-    >
+    <div style={{
+      padding: '3px 12px', borderRadius: '999px',
+      background: `${meta.color}15`,
+      border: `1px solid ${meta.color}35`,
+      fontSize: '11px', fontWeight: 600,
+      color: meta.color, letterSpacing: '0.4px',
+    }}>
       {meta.label.toUpperCase()}
     </div>
   );
