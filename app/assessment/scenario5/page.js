@@ -13,52 +13,52 @@ export default function Scenario5Assessment() {
 
   useEffect(() => {
 
-  async function startExamAttempt() {
+    async function startExamAttempt() {
 
-    try {
+      try {
 
-      const response = await fetch(
-        '/api/assessment/start',
-        {
-          method: 'POST',
+        const response = await fetch(
+          '/api/assessment/start',
+          {
+            method: 'POST',
 
-          headers: {
-            'Content-Type': 'application/json',
-          },
+            headers: {
+              'Content-Type': 'application/json',
+            },
 
-          body: JSON.stringify({
-            scenarioId: 5
-          }),
+            body: JSON.stringify({
+              scenarioId: 5
+            }),
+          }
+        );
+
+        const text = await response.text();
+
+        console.log("RAW START API RESPONSE:", text);
+
+        const data = JSON.parse(text);
+
+        if (data.success) {
+          setAttemptId(data.attemptId);
+
+          console.log(
+            "ATTEMPT ID:",
+            data.attemptId
+          );
         }
-      );
 
-      const text = await response.text();
+      } catch (err) {
 
-      console.log("RAW START API RESPONSE:", text);
-
-      const data = JSON.parse(text);
-
-      if (data.success) {
-        setAttemptId(data.attemptId);
-
-        console.log(
-          "ATTEMPT ID:",
-          data.attemptId
+        console.error(
+          "START API ERROR:",
+          err
         );
       }
-
-    } catch (err) {
-
-      console.error(
-        "START API ERROR:",
-        err
-      );
     }
-  }
 
-  startExamAttempt();
+    startExamAttempt();
 
-}, []);
+  }, []);
 
   const handleAnswer = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
@@ -72,7 +72,7 @@ export default function Scenario5Assessment() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-           attemptId,
+          attemptId,
           scenarioId: scenario5Meta.id,
           answers,
         }),
@@ -91,7 +91,7 @@ export default function Scenario5Assessment() {
     }
   };
   const handleRestart = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard/candidate';
   };
   const handleBackToAssessment = () => {
     setPhase('assessment');

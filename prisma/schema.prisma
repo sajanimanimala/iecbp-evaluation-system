@@ -1,63 +1,71 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum Role {
+  ADMIN
+  EVALUATOR
+  CANDIDATE
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  email     String    @unique
+  password  String
+  role      Role      @default(CANDIDATE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  submissions       Submission[]
+  examAttempts      ExamAttempt[]
+  evaluationResults EvaluationResult[]
+}
+
 model Submission {
   id          Int      @id @default(autoincrement())
   scenarioId  Int
   submittedAt String
-
-  answers Answer[]
+  candidateId Int?
+  answers     Answer[]
+  candidate   User?    @relation(fields: [candidateId], references: [id])
 }
 
 model Answer {
-  id            Int        @id @default(autoincrement())
-  submissionId  Int
-  questionId    Int
-  answer        String
-
-  submission Submission @relation(fields: [submissionId], references: [id])
-}
-model ExamAttempt {
-  id Int @id @default(autoincrement())
-
-  start_time DateTime @default(now())
-
-  submit_time DateTime?
-
-  duration_minutes Float?
-
-  status String @default("started")
-}
-model EvaluationResult {
-
-  id Int @id @default(autoincrement())
-
+  id           Int        @id @default(autoincrement())
   submissionId Int
+  questionId   Int
+  answer       String
+  submission   Submission @relation(fields: [submissionId], references: [id])
+}
 
-  scenarioId Int
+model ExamAttempt {
+  id               Int       @id @default(autoincrement())
+  userId           Int?
+  start_time       DateTime  @default(now())
+  submit_time      DateTime?
+  duration_minutes Float?
+  status           String    @default("started")
+  user             User?     @relation(fields: [userId], references: [id])
+}
 
-  overallScore Float
-
-  understanding Float
-
-  awareness Float
-
-  decision Float
-
-  clarity Float
-
-  feedback Json
-
+model EvaluationResult {
+  id                 Int      @id @default(autoincrement())
+  submissionId       Int
+  scenarioId         Int
+  evaluatorId        Int?
+  overallScore       Float
+  understanding      Float
+  awareness          Float
+  decision           Float
+  clarity            Float
+  feedback           Json
   evaluatedQuestions Json
-
-  createdAt DateTime @default(now())
+  createdAt          DateTime @default(now())
+  evaluator          User?    @relation(fields: [evaluatorId], references: [id])
 }
