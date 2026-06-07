@@ -8,22 +8,22 @@ import DragRankQuestion from './questions/DragRankQuestion';
 import AudioQuestion from './questions/AudioQuestion';
 import VideoQuestion from './questions/VideoQuestion';
 
-export default function QuestionRenderer({ question, value, onChange }) {
+export default function QuestionRenderer({ question, value, onChange, readOnly = false }) {
   switch (question.type) {
     case 'short_text':
-      return <ShortTextQuestion question={question} value={value} onChange={onChange} />;
+      return <ShortTextQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'mcq':
-      return <MCQQuestion question={question} value={value} onChange={onChange} />;
+      return <MCQQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'yes_no':
-      return <YesNoQuestion question={question} value={value} onChange={onChange} />;
+      return <YesNoQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'multi_select':
-      return <MultiSelectQuestion question={question} value={value} onChange={onChange} />;
+      return <MultiSelectQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'drag_rank':
-      return <DragRankQuestion question={question} value={value} onChange={onChange} />;
+      return <DragRankQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'audio':
-      return <AudioQuestion question={question} value={value} onChange={onChange} />;
+      return <AudioQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'video':
-      return <VideoQuestion question={question} value={value} onChange={onChange} />;
+      return <VideoQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
     default:
       return (
         <div style={{ color: '#94A3B8', fontSize: '14px', padding: '1rem' }}>

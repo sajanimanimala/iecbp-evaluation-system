@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function VideoQuestion({ question, value, onChange }) {
+export default function VideoQuestion({ question, value, onChange, readOnly = false }) {
   const [videoState, setVideoState] = useState('idle'); // idle | playing | paused | ended
   const [hasWatched, setHasWatched] = useState(value?.watched || false);
   const [focused, setFocused] = useState(false);
@@ -39,6 +39,7 @@ export default function VideoQuestion({ question, value, onChange }) {
   };
 
   const handleResponse = (text) => {
+    if (readOnly) return;
     onChange({ ...value, watched: hasWatched, response: text });
   };
 
@@ -239,6 +240,7 @@ export default function VideoQuestion({ question, value, onChange }) {
           <textarea
             value={answer}
             onChange={(e) => handleResponse(e.target.value)}
+            disabled={readOnly}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={question.placeholder}
