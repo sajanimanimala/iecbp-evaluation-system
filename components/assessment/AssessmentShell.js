@@ -33,8 +33,15 @@ function isAnswered(answer) {
 
 export default function AssessmentShell({ meta, questions, answers, onAnswer, onFinish }) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [questionStartTime, setQuestionStartTime] = useState(Date.now());
+  const [questionTimings, setQuestionTimings] = useState({});
+  const [timeLeft, setTimeLeft] = useState(meta.minutes * 60);
+  const [showWarning, setShowWarning] = useState(false);
+
   const [questionTimers, setQuestionTimers] = useState(() =>
-    Object.fromEntries(questions.map((_, index) => [index, QUESTION_TIMER_SECONDS]))
+    Object.fromEntries(
+      questions.map((_, index) => [index, QUESTION_TIMER_SECONDS])
+    )
   );
   const [direction, setDirection] = useState(1);
   const [validationError, setValidationError] = useState('');
@@ -82,6 +89,9 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
     return () => clearInterval(interval);
   }, [currentIndex, currentQuestion, isLast, onFinish]);
 
+  useEffect(() => {
+    setQuestionStartTime(Date.now());
+  }, [currentIndex]);
   // ── Validate current answer ──
   const validateCurrent = useCallback(() => {
     const answer = answers[currentQuestion.id];
@@ -179,9 +189,27 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
     }
 
     setValidationError('');
+    const timeSpent = Math.floor(
+      (Date.now() - questionStartTime) / 1000
+    );
 
+    setQuestionTimings(prev => ({
+      ...prev,
+      [currentQuestion.id]: timeSpent
+    }));
+
+    console.log("All Timings:", {
+      ...questionTimings,
+      [currentQuestion.id]: timeSpent
+    });
     if (isLast) {
-      onFinish();   // hand off to SubmitScreen
+      onFinish({
+        answers,
+        questionTimings: {
+          ...questionTimings,
+          [currentQuestion.id]: timeSpent
+        }
+      });
       return;
     }
 

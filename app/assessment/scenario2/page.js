@@ -37,7 +37,7 @@ export default function Scenario2Assessment() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-           attemptId,
+          attemptId,
           scenarioId: scenario2Meta.id,
           answers,
         }),
@@ -57,7 +57,7 @@ export default function Scenario2Assessment() {
   };
 
   const handleRestart = () => {
-    router.push('/');
+    router.push('/dashboard/candidate');
   };
   const handleBackToAssessment = () => {
     setPhase('assessment');

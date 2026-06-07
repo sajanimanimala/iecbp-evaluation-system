@@ -8,11 +8,11 @@ export async function POST(req) {
 
     const body = await req.json().catch(() => ({}));
 
-    
+
     const examAttempt = await prisma.examAttempt.create({
       data: {
 
-        
+
 
         start_time: new Date(),
 

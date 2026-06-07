@@ -18,6 +18,7 @@ export default function ResultsPage() {
 
     const submissionId =
       params.get('submissionId');
+    console.log("submissionId:", submissionId);
 
     async function fetchResults() {
 
@@ -26,7 +27,7 @@ export default function ResultsPage() {
       );
 
       const data = await res.json();
-
+      console.log("API data:", data);
       setResult(data.result);
     }
 

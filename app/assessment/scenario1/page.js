@@ -10,10 +10,12 @@ export default function Scenario1Assessment() {
   const [phase, setPhase] = useState('assessment'); // 'assessment' | 'submit'
   const [answers, setAnswers] = useState({});
   const [attemptId, setAttemptId] = useState(null);
+  const [questionTimings, setQuestionTimings] = useState({});
 
   const router = useRouter();
   useEffect(() => {
     const startExamAttempt = async () => {
+
       const res = await fetch('/api/assessment/start', {
         method: 'POST'
       });
@@ -33,7 +35,17 @@ export default function Scenario1Assessment() {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  const handleFinish = async () => {
+  const handleFinish = async (submissionData) => {
+    console.log("attemptId =", attemptId);
+    console.log(
+      "Received timings:",
+      submissionData.questionTimings
+    );
+
+    setQuestionTimings(
+      submissionData.questionTimings
+    );
+    setQuestionTimings(submissionData.questionTimings);
     try {
       const response = await fetch('/api/submissions', {
         method: 'POST',
@@ -41,9 +53,10 @@ export default function Scenario1Assessment() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-           attemptId,
+          attemptId,
           scenarioId: scenario1Meta.id,
-          answers,
+          answers: submissionData.answers,
+          questionTimings: submissionData.questionTimings,
         }),
       });
 
@@ -66,7 +79,7 @@ export default function Scenario1Assessment() {
   };
 
   const handleRestart = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard/candidate';
   };
   const handleBackToAssessment = () => {
     setPhase('assessment');
@@ -138,6 +151,7 @@ export default function Scenario1Assessment() {
                 meta={scenario1Meta}
                 questions={scenario1Questions}
                 answers={answers}
+                questionTimings={questionTimings}
                 onRestart={handleRestart}
                 onBack={handleBackToAssessment}
                 attemptId={attemptId}

@@ -55,7 +55,7 @@ export default function Scenario6Assessment() {
   };
 
   const handleRestart = () => {
-    window.location.href = '/';
+    window.location.href = '/dashboard/candidate';
   };
   const handleBackToAssessment = () => {
     setPhase('assessment');
