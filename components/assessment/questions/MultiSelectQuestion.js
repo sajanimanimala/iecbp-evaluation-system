@@ -11,12 +11,13 @@ const OPTION_COLORS = {
   F: { base: '#FBBF24', bg: 'rgba(251,191,36,0.09)', border: 'rgba(251,191,36,0.38)', glow: 'rgba(251,191,36,0.2)' },
 };
 
-export default function MultiSelectQuestion({ question, value, onChange }) {
+export default function MultiSelectQuestion({ question, value, onChange, readOnly = false }) {
   const selected = value || [];
   const max = question.maxSelections || 2;
   const atMax = selected.length >= max;
 
   const toggle = (key) => {
+    if (readOnly) return;
     if (selected.includes(key)) {
       onChange(selected.filter((k) => k !== key));
     } else {
@@ -155,7 +156,7 @@ export default function MultiSelectQuestion({ question, value, onChange }) {
                   ? `1.5px solid ${colors.border}`
                   : '1px solid rgba(255,255,255,0.06)',
                 borderRadius: '16px',
-                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                cursor: readOnly || isDisabled ? 'not-allowed' : 'pointer',
                 transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
                 opacity: isDisabled ? 0.4 : 1,
                 boxShadow: isSelected

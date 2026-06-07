@@ -11,7 +11,7 @@ const OPTION_COLORS = {
   E: { base: '#F472B6', bg: 'rgba(244,114,182,0.08)', border: 'rgba(244,114,182,0.35)', glow: 'rgba(244,114,182,0.2)' },
 };
 
-export default function MCQQuestion({ question, value, onChange }) {
+export default function MCQQuestion({ question, value, onChange, readOnly = false }) {
   const [hovered, setHovered] = useState(null);
 
   return (
@@ -37,7 +37,7 @@ export default function MCQQuestion({ question, value, onChange }) {
             whileTap={{ scale: 0.985 }}
             onMouseEnter={() => setHovered(option.key)}
             onMouseLeave={() => setHovered(null)}
-            onClick={() => onChange(option.key)}
+            onClick={() => !readOnly && onChange(option.key)}
             style={{
               display: 'flex', alignItems: 'center', gap: '1rem',
               padding: '1.1rem 1.4rem',
@@ -52,7 +52,7 @@ export default function MCQQuestion({ question, value, onChange }) {
                 ? '1px solid rgba(255,255,255,0.12)'
                 : '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px',
-              cursor: 'pointer',
+              cursor: readOnly ? 'not-allowed' : 'pointer',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: selected
                 ? `0 0 28px ${colors.glow}, 0 8px 24px rgba(0,0,0,0.2)`

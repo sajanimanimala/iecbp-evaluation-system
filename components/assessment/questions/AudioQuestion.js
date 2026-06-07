@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function AudioQuestion({ question, value, onChange }) {
+export default function AudioQuestion({ question, value, onChange, readOnly = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -92,6 +92,7 @@ export default function AudioQuestion({ question, value, onChange }) {
   };
 
   const handleResponse = (text) => {
+    if (readOnly) return;
     onChange({ ...value, listened: hasListened, response: text });
   };
 
@@ -396,6 +397,7 @@ export default function AudioQuestion({ question, value, onChange }) {
           <textarea
             value={answer}
             onChange={(e) => handleResponse(e.target.value)}
+            disabled={readOnly}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={question.placeholder}

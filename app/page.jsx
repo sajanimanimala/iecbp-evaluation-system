@@ -177,7 +177,7 @@ export default function Home() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                {['6 Scenarios', '45 Min Assessment', 'Multimedia Enabled'].map((pill, i) => (
+                {['6 Scenarios', '50 Min Assessment', 'Multimedia Enabled'].map((pill, i) => (
                   <div key={i} style={{
                     padding: '5px 14px', borderRadius: '999px',
                     background: 'rgba(99,102,241,0.08)',
@@ -258,7 +258,7 @@ export default function Home() {
                 {[
                   { label: 'Total Scenarios', value: '6' },
                   { label: 'Questions Each', value: '10' },
-                  { label: 'Duration', value: '45 Min' },
+                  { label: 'Duration', value: '50 Min' },
                 ].map((stat, i) => (
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#F8FAFC' }}>{stat.value}</div>
@@ -423,7 +423,7 @@ function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick })
             </svg>
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>{scenario.minutes} Min</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>5 Mins / Q</div>
             <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>Duration</div>
           </div>
         </div>
@@ -602,7 +602,7 @@ function ScenarioBriefing({ scenario, onBack }) {
               <span style={{
                 fontSize: '10px', padding: '3px 8px', borderRadius: '999px',
                 background: 'rgba(96,165,250,0.12)', color: '#60A5FA', fontWeight: 600,
-              }}>{scenario.minutes} MIN</span>
+              }}>5 Mins / Q</span>
             </div>
           </div>
         </motion.div>
@@ -690,7 +690,7 @@ function ScenarioBriefing({ scenario, onBack }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               {[
                 { icon: '🧩', label: 'Total Questions', value: `${scenario.questions} Questions`, color: '#6366F1' },
-                { icon: '⏱️', label: 'Time Limit', value: `${scenario.minutes} Minutes`, color: '#60A5FA' },
+                { icon: '⏱️', label: 'Time Limit', value: '5 Mins / Question', color: '#60A5FA' },
               ].map((m, i) => (
                 <div key={i} style={{
                   padding: '1rem 1.25rem',
@@ -785,9 +785,9 @@ function ScenarioBriefing({ scenario, onBack }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {[
                 { icon: '🎯', title: 'One Question at a Time', desc: 'Each question is presented individually for focused evaluation.' },
-                { icon: '↩️', title: 'Edit Previous Answers', desc: 'You can return and revise any earlier answer before submission.' },
+                { icon: '↩️', title: 'Edit Previous Answers', desc: 'You can revise earlier answers only while each question’s 5-minute timer is still active; after it expires, that question will no longer be accessible.' },
                 { icon: '⚠️', title: 'Answer Required', desc: 'You cannot proceed to the next question without responding.' },
-                { icon: '⏳', title: 'Timer Active', desc: 'The 45-minute timer runs throughout the entire assessment.' },
+                { icon: '⏳', title: 'Timer Active', desc: 'Each question gets 5 minutes only.' },
               ].map((item, i) => (
                 <div key={i} style={{
                   display: 'flex', gap: '0.75rem',

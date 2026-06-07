@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
-export default function ShortTextQuestion({ question, value, onChange }) {
+export default function ShortTextQuestion({ question, value, onChange, readOnly = false }) {
   const [focused, setFocused] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const wordCount = value ? value.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -32,7 +32,8 @@ export default function ShortTextQuestion({ question, value, onChange }) {
 
         <textarea
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => !readOnly && onChange(e.target.value)}
+          disabled={readOnly}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={question.placeholder}

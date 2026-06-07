@@ -10,6 +10,8 @@ function formatTime(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+const QUESTION_TIMER_SECONDS = 300;
+
 function isAnswered(answer) {
   if (answer === undefined || answer === null) return false;
   if (typeof answer === 'string') return answer.trim().length > 0;
@@ -31,8 +33,9 @@ function isAnswered(answer) {
 
 export default function AssessmentShell({ meta, questions, answers, onAnswer, onFinish }) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(meta.minutes * 60);
-  const [showWarning, setShowWarning] = useState(false);
+  const [questionTimers, setQuestionTimers] = useState(() =>
+    Object.fromEntries(questions.map((_, index) => [index, QUESTION_TIMER_SECONDS]))
+  );
   const [direction, setDirection] = useState(1);
   const [validationError, setValidationError] = useState('');
 
@@ -48,27 +51,36 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
   const currentQuestion = questions[currentIndex];
   const answeredCount = questions.filter((q) => isAnswered(answers[q.id])).length;
   const isLast = currentIndex === totalQuestions - 1;
-  const isTimeLow = timeLeft <= 300;
+  const questionTimeLeft = questionTimers[currentIndex] ?? QUESTION_TIMER_SECONDS;
+  const isQuestionTimeLow = questionTimeLeft <= 120;
 
-  // ── Timer ──
   useEffect(() => {
-    if (timeLeft <= 0) return;
+    if (!currentQuestion) return;
+
     const interval = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(interval); onFinish(); return 0; }
-        return t - 1;
+      setQuestionTimers((prev) => {
+        const currentValue = prev[currentIndex] ?? QUESTION_TIMER_SECONDS;
+
+        if (currentValue <= 1) {
+          clearInterval(interval);
+
+          if (isLast) {
+            onFinish();
+            return { ...prev, [currentIndex]: 0 };
+          }
+
+          const nextIndex = currentIndex + 1;
+          setDirection(1);
+          setCurrentIndex(nextIndex);
+          return { ...prev, [currentIndex]: 0, [nextIndex]: QUESTION_TIMER_SECONDS };
+        }
+
+        return { ...prev, [currentIndex]: currentValue - 1 };
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
-  // ── 5-min warning toast ──
-  useEffect(() => {
-    if (timeLeft !== 300) return;
-    setShowWarning(true);
-    const timer = setTimeout(() => setShowWarning(false), 4000);
-    return () => clearTimeout(timer);
-  }, [timeLeft]);
+    return () => clearInterval(interval);
+  }, [currentIndex, currentQuestion, isLast, onFinish]);
 
   // ── Validate current answer ──
   const validateCurrent = useCallback(() => {
@@ -174,14 +186,14 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
     }
 
     setDirection(1);
-    setCurrentIndex((i) => i + 1);
-  }, [validateCurrent, isLast, onFinish]);
+    setCurrentIndex(currentIndex + 1);
+  }, [validateCurrent, isLast, onFinish, currentIndex]);
 
   // ── Prev ──
   const goPrev = useCallback(() => {
     if (currentIndex === 0) return;
     setDirection(-1);
-    setCurrentIndex((i) => i - 1);
+    setCurrentIndex(currentIndex - 1);
     setValidationError('');
   }, [currentIndex]);
 
@@ -254,53 +266,26 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
           </div>
         </div>
 
-        {/* Timer */}
+        {/* Question timer only */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '7px 16px', borderRadius: '999px',
-          background: isTimeLow ? 'rgba(239,68,68,0.1)' : 'rgba(99,102,241,0.08)',
-          border: isTimeLow ? '1px solid rgba(239,68,68,0.3)' : `1px solid ${theme.primary}40`,
-          transition: 'all 0.3s ease',
+          padding: '7px 14px', borderRadius: '999px',
+          background: isQuestionTimeLow ? 'rgba(239,68,68,0.12)' : 'rgba(15,23,42,0.9)',
+          border: isQuestionTimeLow ? '1px solid rgba(239,68,68,0.35)' : '1px solid rgba(148,163,184,0.18)',
+          color: isQuestionTimeLow ? '#FCA5A5' : '#E2E8F0',
+          flexShrink: 0,
+          transition: 'all 0.25s ease',
         }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-            stroke={isTimeLow ? '#EF4444' : '#6366F1'} strokeWidth="2.5">
+            stroke={isQuestionTimeLow ? '#F87171' : '#6366F1'} strokeWidth="2.5">
             <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
-          <span style={{
-            fontSize: '14px', fontWeight: 700, letterSpacing: '0.5px',
-            color: isTimeLow ? '#EF4444' : '#CBD5E1',
-            fontVariantNumeric: 'tabular-nums',
-          }}>
-            {formatTime(timeLeft)}
+          <span style={{ fontSize: '11px', color: isQuestionTimeLow ? '#FCA5A5' : '#A5B4FC', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.35px' }}>Question</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: isQuestionTimeLow ? '#FCA5A5' : '#E2E8F0', fontVariantNumeric: 'tabular-nums' }}>
+            {formatTime(questionTimeLeft)}
           </span>
         </div>
       </nav>
-
-      {/* ── LOW TIME WARNING TOAST ── */}
-      <AnimatePresence>
-        {showWarning && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            style={{
-              position: 'fixed', top: '76px', left: '50%', transform: 'translateX(-50%)',
-              zIndex: 200,
-              background: 'rgba(239,68,68,0.12)',
-              border: '1px solid rgba(239,68,68,0.35)',
-              borderRadius: '12px',
-              padding: '10px 20px',
-              display: 'flex', alignItems: 'center', gap: '8px',
-              backdropFilter: 'blur(12px)',
-            }}
-          >
-            <span style={{ fontSize: '14px' }}>⚠️</span>
-            <span style={{ fontSize: '13px', color: '#FCA5A5', fontWeight: 600 }}>
-              5 minutes remaining — please complete your responses.
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── BODY ── */}
       <div style={{
@@ -367,6 +352,7 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
                 question={currentQuestion}
                 value={answers[currentQuestion.id]}
                 onChange={(val) => onAnswer(currentQuestion.id, val)}
+                readOnly={questionTimeLeft <= 0}
               />
             </motion.div>
           </AnimatePresence>

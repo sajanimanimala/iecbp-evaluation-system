@@ -3,17 +3,19 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function YesNoQuestion({ question, value, onChange }) {
+export default function YesNoQuestion({ question, value, onChange, readOnly = false }) {
   const [focused, setFocused] = useState(false);
 
   const selected = value?.choice || null;
   const reasoning = value?.reasoning || '';
 
   const handleChoice = (choice) => {
+    if (readOnly) return;
     onChange({ choice, reasoning });
   };
 
   const handleReasoning = (text) => {
+    if (readOnly) return;
     onChange({ choice: selected, reasoning: text });
   };
 
@@ -65,7 +67,7 @@ export default function YesNoQuestion({ question, value, onChange }) {
                   ? `1.5px solid ${option.border}`
                   : '1px solid rgba(255,255,255,0.07)',
                 borderRadius: '20px',
-                cursor: 'pointer',
+                cursor: readOnly ? 'not-allowed' : 'pointer',
                 textAlign: 'center',
                 transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
                 boxShadow: isSelected
@@ -184,6 +186,7 @@ export default function YesNoQuestion({ question, value, onChange }) {
                 <textarea
                   value={reasoning}
                   onChange={(e) => handleReasoning(e.target.value)}
+                  disabled={readOnly}
                   onFocus={() => setFocused(true)}
                   onBlur={() => setFocused(false)}
                   placeholder={question.reasoningPlaceholder || 'Explain your reasoning in detail…'}

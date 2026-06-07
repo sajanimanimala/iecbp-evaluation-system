@@ -10,7 +10,7 @@ const RANK_COLORS = [
   { bg: 'rgba(52,211,153,0.10)', border: 'rgba(52,211,153,0.35)', text: '#34D399', glow: 'rgba(52,211,153,0.2)', label: '4th' },
 ];
 
-export default function DragRankQuestion({ question, value, onChange }) {
+export default function DragRankQuestion({ question, value, onChange, readOnly = false }) {
   const initialItems = question.items.map((item) => item.id);
   const [order, setOrder] = useState(() => {
     if (value && Array.isArray(value) && value.length === question.items.length) return value;
@@ -60,7 +60,8 @@ export default function DragRankQuestion({ question, value, onChange }) {
       <Reorder.Group
         axis="y"
         values={order}
-        onReorder={handleReorder}
+        onReorder={readOnly ? () => {} : handleReorder}
+        disabled={readOnly}
         style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
       >
         {order.map((id, index) => {
