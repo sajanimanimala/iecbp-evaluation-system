@@ -7,33 +7,28 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  EVALUATOR
-  CANDIDATE
-}
-
 model User {
-  id        Int       @id @default(autoincrement())
-  name      String?
-  email     String    @unique
-  password  String
-  role      Role      @default(CANDIDATE)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  submissions       Submission[]
-  examAttempts      ExamAttempt[]
+  id                Int                @id @default(autoincrement())
+  name              String?
+  email             String             @unique
+  password          String
+  role              Role               @default(CANDIDATE)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime
+  candidate         Candidate?
   evaluationResults EvaluationResult[]
+  examAttempts      ExamAttempt[]
 }
 
 model Submission {
-  id          Int      @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   scenarioId  Int
   submittedAt String
   candidateId Int?
+  attemptId   Int?
   answers     Answer[]
-  candidate   User?    @relation(fields: [candidateId], references: [id])
+  attempt     ExamAttempt? @relation(fields: [attemptId], references: [id])
+  candidate   Candidate?   @relation(fields: [candidateId], references: [id])
 }
 
 model Answer {
@@ -45,20 +40,22 @@ model Answer {
 }
 
 model ExamAttempt {
-  id               Int       @id @default(autoincrement())
-  userId           Int?
-  start_time       DateTime  @default(now())
+  id               Int          @id @default(autoincrement())
+  start_time       DateTime     @default(now())
   submit_time      DateTime?
   duration_minutes Float?
-  status           String    @default("started")
-  user             User?     @relation(fields: [userId], references: [id])
+  status           String       @default("started")
+  userId           Int?
+  candidateId      Int?
+  candidate        Candidate?   @relation(fields: [candidateId], references: [id])
+  user             User?        @relation(fields: [userId], references: [id])
+  submissions      Submission[]
 }
 
 model EvaluationResult {
   id                 Int      @id @default(autoincrement())
   submissionId       Int
   scenarioId         Int
-  evaluatorId        Int?
   overallScore       Float
   understanding      Float
   awareness          Float
@@ -67,5 +64,22 @@ model EvaluationResult {
   feedback           Json
   evaluatedQuestions Json
   createdAt          DateTime @default(now())
+  evaluatorId        Int?
   evaluator          User?    @relation(fields: [evaluatorId], references: [id])
+}
+
+model Candidate {
+  id             Int           @id @default(autoincrement())
+  candidate_code String        @unique
+  name           String
+  userId         Int?          @unique
+  user           User?         @relation(fields: [userId], references: [id])
+  attempts       ExamAttempt[]
+  submissions    Submission[]
+}
+
+enum Role {
+  ADMIN
+  EVALUATOR
+  CANDIDATE
 }

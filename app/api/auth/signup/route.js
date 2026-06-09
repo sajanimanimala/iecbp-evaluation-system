@@ -35,13 +35,24 @@ export async function POST(req) {
         const hashed = await bcrypt.hash(password, saltRounds);
 
         const user = await prisma.user.create({
-            data: {
-                name: name || null,
-                email,
-                password: hashed,
-                role: 'CANDIDATE',
-            }
-        });
+    data: {
+        name: name || null,
+        email,
+        password: hashed,
+        role: 'CANDIDATE',
+    }
+});
+
+await prisma.candidate.create({
+    data: {
+        userId: user.id,
+
+        candidate_code:
+            `CAND${String(user.id).padStart(4, '0')}`,
+
+        name: user.name || "Candidate",
+    }
+});
 
         // sign token and set cookie
         const safe = { id: user.id, email: user.email, role: user.role, name: user.name };

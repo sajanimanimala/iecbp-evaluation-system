@@ -4,6 +4,7 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
+console.log("SUBMISSION API HIT");
 export async function POST(req) {
 
   try {
@@ -17,51 +18,55 @@ export async function POST(req) {
     } = body;
 
     // ─────────────────────────────────────
-    // PREVENT DUPLICATE SUBMISSIONS
+    // STEP 1 — Create submission
     // ─────────────────────────────────────
 
-    const latestSubmission =
-      await prisma.submission.findFirst({
-
-        where: {
-          scenarioId,
-        },
-
-        orderBy: {
-          id: 'desc',
-        },
-
-        include: {
-          answers: true,
-        },
-      });
-
-    // Prevent duplicate insert
-    if (
-      latestSubmission &&
-      latestSubmission.answers &&
-      latestSubmission.answers.length > 0
-    ) {
-
-      console.log("DUPLICATE SUBMISSION PREVENTED");
-
+    if (!attemptId) {
       return Response.json({
-        success: true,
-
-        submissionId: latestSubmission.id,
-
-        duplicatePrevented: true,
+        success: false,
+        message: 'Attempt ID is required',
+      }, {
+        status: 400,
       });
     }
 
-    // ─────────────────────────────────────
-    // STEP 1 — Create submission
-    // ─────────────────────────────────────
+    const attempt = await prisma.examAttempt.findUnique({
+      where: {
+        id: Number(attemptId),
+      },
+    });
+
+    if (!attempt) {
+      return Response.json({
+        success: false,
+        message: 'Exam attempt not found',
+      }, {
+        status: 404,
+      });
+    }
+
+    const existingSubmission = await prisma.submission.findFirst({
+      where: {
+        attemptId: Number(attemptId),
+        scenarioId,
+      },
+    });
+
+    if (existingSubmission) {
+      return Response.json({
+        success: true,
+        duplicatePrevented: true,
+        submissionId: existingSubmission.id,
+      });
+    }
+
+    const candidateId = attempt.candidateId ? Number(attempt.candidateId) : null;
 
     const submission = await prisma.submission.create({
       data: {
         scenarioId,
-
+        attemptId: Number(attemptId),
+        candidateId,
         submittedAt: new Date().toLocaleString('en-IN', {
           timeZone: 'Asia/Kolkata',
         }),
