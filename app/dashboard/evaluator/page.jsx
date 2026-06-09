@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import { fetchSession, getAuthUser, redirectPathForRole } from '../../../components/auth/auth';
 import DashboardHeader from '../../../components/DashboardHeader';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockSubmissions } from '../../../data/mockEvaluations';
 
 export default function EvaluatorDashboardPage() {
     const router = useRouter();
@@ -30,8 +29,15 @@ export default function EvaluatorDashboardPage() {
             }
             if (mounted) setUser(u);
 
-            // preserve existing behavior of loading mock submissions
-            if (mounted) setSubmissions(mockSubmissions);
+            try {
+                const res = await fetch('/api/evaluator/submissions');
+                const data = await res.json();
+                if (mounted && res.ok && data.success) {
+                    setSubmissions(data.submissions || []);
+                }
+            } catch (error) {
+                console.error('Failed to load submissions', error);
+            }
         }
 
         init();
@@ -42,9 +48,8 @@ export default function EvaluatorDashboardPage() {
     const filtered = submissions
         .filter(s => {
             const query = searchTerm.toLowerCase();
-            return (s.candidateName.toLowerCase().includes(query) ||
-                s.scenario.toLowerCase().includes(query) ||
-                (s.email?.toLowerCase().includes(query)));
+            return (s.candidateCode.toLowerCase().includes(query) ||
+                s.scenario.toLowerCase().includes(query));
         })
         .filter(s => statusFilter === 'all' ? true : s.status === statusFilter)
         .sort((a, b) => {
@@ -268,7 +273,7 @@ export default function EvaluatorDashboardPage() {
                                             letterSpacing: '0.3px',
                                             fontSize: '11px',
                                             textTransform: 'uppercase',
-                                        }}>Candidate Name</th>
+                                        }}>Candidate Code</th>
                                         <th style={{
                                             padding: '1.25rem',
                                             textAlign: 'left',
@@ -318,14 +323,12 @@ export default function EvaluatorDashboardPage() {
                                                         cursor: 'pointer',
                                                         transition: 'background-color 0.2s ease',
                                                     }}
+                                                    onClick={() => router.push(`/dashboard/evaluator/submission/${submission.id}`)}
                                                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(99,102,241,0.08)'}
                                                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                                                 >
                                                     <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
-                                                        <div>{submission.candidateName}</div>
-                                                        <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                                                            {submission.email}
-                                                        </div>
+                                                        <div>{submission.candidateCode}</div>
                                                     </td>
                                                     <td style={{ padding: '1.25rem', color: '#CBD5E1' }}>
                                                         {submission.scenario}

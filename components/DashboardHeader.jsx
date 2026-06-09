@@ -14,7 +14,7 @@ export default function DashboardHeader() {
             height: '72px'
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src="/logo.svg" alt="IECBP" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+                <img src="/logo.jpeg" alt="IECBP" style={{ width: 44, height: 44, objectFit: 'contain' }} />
                 <div>
                     <div style={{ fontSize: 16, fontWeight: 700, color: '#F8FAFC' }}>IECBP Evaluation System</div>
                     <div style={{ fontSize: 12, color: '#94A3B8' }}>Scenario-Based Candidate Evaluation Platform</div>
