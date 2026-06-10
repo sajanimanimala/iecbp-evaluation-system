@@ -294,48 +294,12 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
 
     try {
 
-      // STEP 1 — assessment timing validation
-      const evalRes = await fetch('/api/evaluation/evaluate', {
+      // STEP 1 — Save answers + evaluation
+      const saveRes = await fetch('/api/submissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          submissionId: saveData.submissionId,
-          scenarioId: meta.id
-        })
-      });
-
-      const evalData = await evalRes.json();
-
-      console.log("EVALUATION RESPONSE:", evalData);
-
-      const data = await res.json();
-
-      // Too fast warning
-      if (data.tooFast) {
-        setShowFastSubmitWarning(true);
-        setSubmitting(false);
-        return;
-      }
-
-      if (!res.ok) {
-        setSubmitError(
-          data.message || 'Submission blocked'
-        );
-
-        setSubmitting(false);
-        return;
-      }
-
-      // STEP 2 — Save answers + run evaluation
-      const saveRes = await fetch('/api/submissions', {
-        method: 'POST',
-
-        headers: {
-          'Content-Type': 'application/json',
-        },
-
         body: JSON.stringify({
           scenarioId: meta.id,
           answers,
@@ -370,8 +334,7 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
         })
       });
       // STEP 3 — redirect to results page
-      window.location.href =
-        `/results?submissionId=${saveData.submissionId}`;
+      setPhase('success');
 
     } catch (err) {
 
@@ -553,7 +516,7 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
               <p style={{ fontSize: '15px', color: '#94A3B8', lineHeight: 1.7, margin: '0 0 2.5rem' }}>
                 Your responses for{' '}
                 <span style={{ color: '#818CF8', fontWeight: 600 }}>{meta.title}</span>{' '}
-                have been recorded. Results will be reviewed and shared with you shortly.
+                have been recorded. Your assessment has been submitted successfully. Results will be updated in your profile within 48 hours.
               </p>
             </motion.div>
 
