@@ -4,11 +4,12 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import LogoutButton from "../auth/LogoutButton";
 
 const navItems = [
   {
     label: 'Dashboard',
-    href: '/admin',
+    href: '/dashboard/admin',
     exact: true,
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -21,7 +22,7 @@ const navItems = [
   },
   {
     label: 'Scenarios',
-    href: '/admin/scenarios',
+    href: '/dashboard/admin/scenarios',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -33,7 +34,7 @@ const navItems = [
   },
   {
     label: 'Candidates',
-    href: '/admin/candidates',
+    href: '/dashboard/admin/candidates',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -45,7 +46,7 @@ const navItems = [
   },
   {
     label: 'Evaluators',
-    href: '/admin/evaluators',
+    href: '/dashboard/admin/evaluators',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -56,7 +57,7 @@ const navItems = [
   },
   {
     label: 'Submissions',
-    href: '/admin/submissions',
+    href: '/dashboard/admin/submissions',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -65,7 +66,7 @@ const navItems = [
   },
   {
     label: 'Results',
-    href: '/admin/results',
+    href: '/dashboard/admin/results',
     icon: (
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <polyline points="18 20 22 16 18 12" />
@@ -197,7 +198,7 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
-
+     
       {/* Bottom — back to platform */}
       <div style={{ padding: '1rem 0.75rem 1.5rem' }}>
         <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '1rem' }} />

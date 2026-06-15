@@ -83,3 +83,45 @@ enum Role {
   EVALUATOR
   CANDIDATE
 }
+model Scenario {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String
+  category    String
+
+  icon        String?
+  level       String?
+  levelColor  String?
+
+  questions   Question[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Question {
+  id           Int       @id @default(autoincrement())
+
+  scenarioId   Int
+  scenario     Scenario  @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  questionText String
+  questionType String
+  orderNo      Int
+
+  options      Option[]
+
+  createdAt    DateTime  @default(now())
+}
+
+model Option {
+  id         Int      @id @default(autoincrement())
+
+  questionId Int
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  optionText String?
+  imageUrl   String?
+
+  createdAt  DateTime @default(now())
+}
