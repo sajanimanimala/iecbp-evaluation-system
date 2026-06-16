@@ -1,8 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const resend = require('../../../../lib/resend');
 
 const prisma = new PrismaClient();
-const { signToken, serializeCookie } = require('../../../../lib/session');
 
 export async function POST(req) {
     try {
@@ -34,33 +35,58 @@ export async function POST(req) {
         const saltRounds = 10;
         const hashed = await bcrypt.hash(password, saltRounds);
 
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+        const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+        const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
         const user = await prisma.user.create({
-    data: {
-        name: name || null,
-        email,
-        password: hashed,
-        role: 'CANDIDATE',
-    }
-});
+            data: {
+                name: name || null,
+                email,
+                password: hashed,
+                role: 'CANDIDATE',
+                isVerified: false,
+                verificationToken: hashedVerificationToken,
+                verificationTokenExpiry,
+            }
+        });
 
-await prisma.candidate.create({
-    data: {
-        userId: user.id,
+        await prisma.candidate.create({
+            data: {
+                userId: user.id,
+                candidate_code:
+                    `CAND${String(user.id).padStart(4, '0')}`,
+                name: user.name || "Candidate",
+            }
+        });
 
-        candidate_code:
-            `CAND${String(user.id).padStart(4, '0')}`,
+        const displayName = user.name ? user.name : 'there';
+        const verificationUrl = `http://localhost:3000/api/auth/verify?token=${verificationToken}`;
+        const subject = 'Verify your IECBP Account';
+        const html = `
+            <p>Hi ${displayName},</p>
+            <p>Thank you for registering with IECBP.</p>
+            <p>Please verify your email by clicking the link below:</p>
+            <p><a href="${verificationUrl}">Verify your email</a></p>
+            <p>This link expires in 24 hours.</p>
+            <p>If you did not register, you can ignore this email.</p>
+        `;
 
-        name: user.name || "Candidate",
-    }
-});
+        try {
+            const { data, error } = await resend.emails.send({
+                from: "IECBP <onboarding@resend.dev>",
+                to: user.email,
+                subject,
+                html,
+            });
 
-        // sign token and set cookie
-        const safe = { id: user.id, email: user.email, role: user.role, name: user.name };
-        const token = signToken(safe);
-        const cookie = serializeCookie(token);
+            console.log("RESEND DATA:", data);
+            console.log("RESEND ERROR:", error);
+        } catch (err) {
+            console.error("RESEND EXCEPTION:", err);
+        }
 
-        // return safe response with cookie
-        return new Response(JSON.stringify({ ok: true, user: safe }), { status: 201, headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie } });
+        return new Response(JSON.stringify({ ok: true, message: 'Registration successful. Please verify your email.' }), { status: 201, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
         console.error('SIGNUP ERROR', error);

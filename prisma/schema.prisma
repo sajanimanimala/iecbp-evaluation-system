@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id                Int                @id @default(autoincrement())
-  name              String?
-  email             String             @unique
-  password          String
-  role              Role               @default(CANDIDATE)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime
-  candidate         Candidate?
-  evaluationResults EvaluationResult[]
-  examAttempts      ExamAttempt[]
+  id                        Int                @id @default(autoincrement())
+  name                      String?
+  email                     String             @unique
+  password                  String
+  role                      Role               @default(CANDIDATE)
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  isVerified                Boolean            @default(false)
+  verificationToken         String?
+  verificationTokenExpiry   DateTime?
+  candidate                 Candidate?
+  evaluationResults         EvaluationResult[]
+  examAttempts              ExamAttempt[]
 }
 
 model Submission {
