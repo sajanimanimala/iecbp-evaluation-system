@@ -18,6 +18,8 @@ model User {
   isVerified                Boolean            @default(false)
   verificationToken         String?
   verificationTokenExpiry   DateTime?
+  resetToken                String?
+  resetTokenExpiry          DateTime?
   candidate                 Candidate?
   evaluationResults         EvaluationResult[]
   examAttempts              ExamAttempt[]

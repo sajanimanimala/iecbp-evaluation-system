@@ -10,8 +10,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     function validate() {
-        if (!email || !password) return 'Email and password are required.';
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Invalid email address.';
+        if (!email || !password) return 'Email/Candidate Code and password are required.';
         return null;
     }
 
@@ -57,11 +56,13 @@ export default function LoginPage() {
                 <p style={{ color: '#94A3B8', marginBottom: '1rem' }}>Enter your credentials to continue.</p>
                 {error && <div style={{ marginBottom: '12px', padding: '10px', borderRadius: '8px', background: 'rgba(239,68,68,0.08)', color: '#FCA5A5' }}>{error}</div>}
 
-                <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Email</label>
-                <input value={email} onChange={e => setEmail(e.target.value)} className="w-full mb-3 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
+                <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Email or Candidate Code</label>
+                <input value={email} onChange={e => setEmail(e.target.value)} className="w-full mb-3 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" placeholder="name@example.com or CAND0001" />
 
                 <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Password</label>
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full mb-4 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
+
+                <button type="button" onClick={() => router.push('/forgot-password')} style={{ width: '100%', marginBottom: '12px', padding: '8px', background: 'transparent', border: 'none', color: '#818CF8', textAlign: 'left', fontSize: '14px', fontWeight: 500 }}>Forgot Password?</button>
 
                 <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 700 }}>{loading ? 'Signing in...' : 'Sign in'}</button>
             </form>

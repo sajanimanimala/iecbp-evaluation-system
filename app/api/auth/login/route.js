@@ -8,21 +8,32 @@ const { signToken, serializeCookie, parseCookies } = require('../../../../lib/se
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { email: rawEmail, password } = body;
-        const email = (rawEmail || '').trim().toLowerCase();
+        const { email: rawIdentifier, password } = body;
+        const identifier = (rawIdentifier || '').trim().toLowerCase();
 
-        if (!email || !password) {
-            return new Response(JSON.stringify({ message: 'Email and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        if (!identifier || !password) {
+            return new Response(JSON.stringify({ message: 'Email or Candidate Code and password are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        let user;
+        const isEmail = identifier.includes('@');
+
+        if (isEmail) {
+            user = await prisma.user.findUnique({ where: { email: identifier } });
+        } else {
+            const candidate = await prisma.candidate.findUnique({ where: { candidate_code: identifier.toUpperCase() } });
+            if (candidate && candidate.userId) {
+                user = await prisma.user.findUnique({ where: { id: candidate.userId } });
+            }
+        }
+
         if (!user) {
-            return new Response(JSON.stringify({ message: 'Invalid email or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ message: 'Invalid email, candidate code, or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
 
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
-            return new Response(JSON.stringify({ message: 'Invalid email or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+            return new Response(JSON.stringify({ message: 'Invalid email, candidate code, or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
 
         // authenticated - return safe user info

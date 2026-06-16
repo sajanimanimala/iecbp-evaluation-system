@@ -6,17 +6,13 @@ export default function SignupPage() {
     const router = useRouter();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
     function validate() {
-        if (!name || !email || !password || !confirm) return 'All fields are required.';
+        if (!name || !email) return 'All fields are required.';
         // simple email check
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Invalid email address.';
-        if (password.length < 8) return 'Password must be at least 8 characters.';
-        if (password !== confirm) return 'Passwords do not match.';
         return null;
     }
 
@@ -34,7 +30,7 @@ export default function SignupPage() {
             const res = await fetch('/api/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                body: JSON.stringify({ name, email }),
             });
 
             const data = await res.json();
@@ -44,8 +40,6 @@ export default function SignupPage() {
                 return;
             }
 
-            // persist user and redirect to login
-            try { const { setAuthUser } = await import('../../components/auth/auth'); setAuthUser(data.user); } catch (e) { }
             router.push('/login');
         } catch (err) {
             console.error(err);
@@ -71,13 +65,7 @@ export default function SignupPage() {
                 <input value={name} onChange={e => setName(e.target.value)} className="w-full mb-3 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
 
                 <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Email</label>
-                <input value={email} onChange={e => setEmail(e.target.value)} className="w-full mb-3 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
-
-                <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Password</label>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full mb-3 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
-
-                <label style={{ display: 'block', color: '#94A3B8', marginBottom: '6px' }}>Confirm Password</label>
-                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full mb-4 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
+                <input value={email} onChange={e => setEmail(e.target.value)} className="w-full mb-4 p-3 rounded-lg bg-slate-900/40 border border-white/6 text-slate-200" />
 
                 <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 700 }}>{loading ? 'Creating...' : 'Create account'}</button>
 
