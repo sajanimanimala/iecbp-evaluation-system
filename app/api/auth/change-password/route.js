@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const { parseCookies, verifyToken } = require('../../../../lib/session');
+const resend = require('../../../../lib/resend');
+const { passwordChangedEmailTemplate } = require('../../../../lib/emailTemplates');
 
 const prisma = new PrismaClient();
 
@@ -45,6 +47,30 @@ export async function POST(req) {
         const saltRounds = 10;
         const hashed = await bcrypt.hash(newPassword, saltRounds);
         await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+        try {
+            const emailHtml = passwordChangedEmailTemplate(user.name || 'there');
+
+            await resend.emails.send({
+                from: 'IECBP <onboarding@resend.dev>',
+                to: user.email,
+                subject: 'Password Changed Successfully',
+                html: emailHtml,
+            });
+
+            await prisma.notification.create({
+                data: {
+                    userId: user.id,
+                    title: 'Password Updated',
+                    message: 'Your password has been changed successfully.',
+                    isRead: false,
+                },
+            });
+
+            console.log("PASSWORD CHANGE EMAIL AND NOTIFICATION SENT");
+        } catch (emailError) {
+            console.error("ERROR SENDING PASSWORD CHANGE EMAIL:", emailError);
+        }
 
         return new Response(JSON.stringify({ ok: true, message: 'Password changed successfully.' }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     } catch (error) {

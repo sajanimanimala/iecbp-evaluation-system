@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const crypto = require('crypto');
 const { NextResponse } = require('next/server');
+const resend = require('../../../../lib/resend');
+const { emailVerificationSuccessTemplate } = require('../../../../lib/emailTemplates');
 
 const prisma = new PrismaClient();
 
@@ -32,6 +34,30 @@ export async function GET(request) {
                 verificationTokenExpiry: null,
             }
         });
+
+        try {
+            const emailHtml = emailVerificationSuccessTemplate(user.name || 'there');
+
+            await resend.emails.send({
+                from: 'IECBP <onboarding@resend.dev>',
+                to: user.email,
+                subject: 'Email Verified Successfully',
+                html: emailHtml,
+            });
+
+            await prisma.notification.create({
+                data: {
+                    userId: user.id,
+                    title: 'Email Verified',
+                    message: 'Your email has been verified successfully. You can now access all platform features.',
+                    isRead: false,
+                },
+            });
+
+            console.log("VERIFICATION EMAIL AND NOTIFICATION SENT");
+        } catch (emailError) {
+            console.error("ERROR SENDING VERIFICATION EMAIL:", emailError);
+        }
 
         return NextResponse.redirect('http://localhost:3000/login?verified=true');
 
