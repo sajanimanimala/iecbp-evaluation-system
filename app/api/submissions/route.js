@@ -1,6 +1,8 @@
 // app/api/submissions/route.js
 
 const { PrismaClient } = require('@prisma/client');
+const resend = require('../../../lib/resend');
+const { assessmentSubmissionEmailTemplate } = require('../../../lib/emailTemplates');
 
 const prisma = new PrismaClient();
 
@@ -100,6 +102,51 @@ export async function POST(req) {
     });
 
     console.log("ANSWERS STORED");
+
+    // ─────────────────────────────────────
+    // STEP 3.5 — Send confirmation email and notification
+    // ─────────────────────────────────────
+
+    try {
+      if (attempt.userId) {
+        const user = await prisma.user.findUnique({
+          where: { id: attempt.userId },
+          include: { candidate: true },
+        });
+
+        if (user && user.candidate) {
+          const submissionDate = submission.submittedAt.split(',')[0];
+          const submissionTime = submission.submittedAt.split(',')[1]?.trim() || '';
+
+          const emailHtml = assessmentSubmissionEmailTemplate(
+            user.name || 'Candidate',
+            user.candidate.candidate_code,
+            submissionDate,
+            submissionTime
+          );
+
+          await resend.emails.send({
+            from: 'IECBP <onboarding@resend.dev>',
+            to: user.email,
+            subject: 'Assessment Submission Confirmation – IECBP',
+            html: emailHtml,
+          });
+
+          await prisma.notification.create({
+            data: {
+              userId: user.id,
+              title: 'Assessment Submitted Successfully',
+              message: 'Your assessment has been submitted successfully. Your responses are now under evaluation. Results will be available within 48 hours.',
+              isRead: false,
+            },
+          });
+
+          console.log("CONFIRMATION EMAIL AND NOTIFICATION SENT");
+        }
+      }
+    } catch (emailError) {
+      console.error("ERROR SENDING CONFIRMATION EMAIL:", emailError);
+    }
 
     // ─────────────────────────────────────
     // UPDATE EXAM ATTEMPT
