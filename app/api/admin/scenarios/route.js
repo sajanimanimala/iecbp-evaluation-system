@@ -7,12 +7,16 @@ export async function GET() {
       include: {
         questions: {
           include: {
-            options: true,
+            options: {
+  orderBy: {
+    id: "asc",
+  },
+},
           },
         },
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: "asc",
       },
     });
 
@@ -36,7 +40,9 @@ export async function POST(request) {
         title: body.name,
         description: body.description,
         category: body.category,
-
+         level: body.level,
+         icon: body.icon,
+         levelColor: body.levelColor,
         questions: {
           create: body.questions.map((question) => ({
             questionText: question.text,
@@ -56,7 +62,11 @@ export async function POST(request) {
       include: {
         questions: {
           include: {
-            options: true,
+options: {
+  orderBy: {
+    id: "asc",
+  },
+},
           },
         },
       },

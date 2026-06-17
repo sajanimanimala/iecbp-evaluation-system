@@ -1,96 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardHeader from '../../../components/DashboardHeader';
 
-const scenarios = [
-    {
-        id: 1,
-        title: 'Emergency Decision Overload in Healthcare Systems',
-        category: 'Healthcare Operations',
-        level: 'Advanced',
-        levelColor: '#EF4444',
-        summary: 'Critical hospital decisions under operational pressure and rapidly changing emergency situations.',
-        description: 'Many hospitals handle continuous patient inflow, emergency cases, limited ICU beds, staff shortages, and rapidly changing medical conditions simultaneously. Doctors and nurses must make life-critical decisions under time pressure while balancing patient priority, resource availability, and incomplete information. Over time, the accumulation of hidden operational stress and unpredictable emergencies makes effective decision-making increasingly difficult.',
-        icon: '🏥',
-        accent: '#6366F1',
-        questions: 10,
-        minutes: 45,
-    },
-    {
-        id: 2,
-        title: 'The Gap Between Social Media Popularity and Customer Loyalty',
-        category: 'Marketing & Consumer Psychology',
-        level: 'Intermediate',
-        levelColor: '#3B82F6',
-        summary: 'Understanding why viral popularity does not always create genuine customer loyalty.',
-        description: 'A company invests heavily in influencer marketing, celebrity collaborations, and viral online campaigns to build a strong brand image among young customers. Within a few months, the brand dominates social media trends, gains millions of views and followers, and becomes widely recognized across digital platforms. Despite the massive online popularity and constant engagement, the company notices that customer trust remains weak, repeat purchases stay low, and long-term loyalty fails to improve.',
-        icon: '📣',
-        accent: '#3B82F6',
-        questions: 10,
-        minutes: 45,
-    },
-    {
-        id: 3,
-        title: 'The Growing Impact of Uncontrolled Financial Decisions',
-        category: 'Financial Decision-Making',
-        level: 'Beginner',
-        levelColor: '#4ADE80',
-        summary: 'Managing financial imbalance caused by gradual emotional and operational spending pressures.',
-        description: 'A family carefully plans monthly expenses, savings, education costs, medical needs, and future financial goals based on their current income. However, unexpected repairs, rising living costs, emergencies, social obligations, and lifestyle spending slowly disrupt the balance. Individually, each expense may seem manageable, but over time the combination creates financial pressure, reduced savings, and emotional stress.',
-        icon: '💰',
-        accent: '#60A5FA',
-        questions: 10,
-        minutes: 45,
-    },
-    {
-        id: 4,
-        title: 'Ride-Sharing Booking Synchronization Conflicts',
-        category: 'System Design & User Experience',
-        level: 'Advanced',
-        levelColor: '#EF4444',
-        summary: 'Resolving operational confusion caused by ride-booking synchronization failures.',
-        description: 'A customer receives booking confirmation from one ride app while a driver from another app also receives confirmation. Inconsistent real-time booking states create confusion, operational conflict, and reduced platform trust.',
-        icon: '🚗',
-        accent: '#6366F1',
-        questions: 10,
-        minutes: 45,
-    },
-    {
-        id: 5,
-        title: 'The Disconnect Between Customer Data and Real Satisfaction',
-        category: 'Customer Experience & Product Analytics',
-        level: 'Intermediate',
-        levelColor: '#3B82F6',
-        summary: 'Analyzing why huge customer analytics still fail to capture real satisfaction.',
-        description: 'Companies collect massive amounts of customer feedback, analytics, and behavioral data, yet customers still feel misunderstood because emotional frustration and real experience are difficult to measure using numbers alone.',
-        icon: '📊',
-        accent: '#7C3AED',
-        questions: 10,
-        minutes: 45,
-    },
-    {
-        id: 6,
-        title: 'The Unintended Consequences of Flexible Work-From-Home Policies',
-        category: 'Workplace Collaboration & Productivity',
-        level: 'Beginner',
-        levelColor: '#4ADE80',
-        summary: 'Exploring how flexible remote work policies can unintentionally reduce collaboration and productivity.',
-        description: 'Flexible work-from-home systems initially improve employee happiness and comfort, but over time communication delays, weaker collaboration, and coordination issues begin affecting productivity and operational efficiency.',
-        icon: '🏠',
-        accent: '#60A5FA',
-        questions: 10,
-        minutes: 45,
-    },
-];
+
 
 const timelineSteps = ['Scenario Briefing', 'Assessment', 'Review', 'Submit'];
 
 export default function Home() {
     const [selectedScenario, setSelectedScenario] = useState(null);
     const [hoveredCard, setHoveredCard] = useState(null);
+    const [scenarios, setScenarios] = useState([]);
+    useEffect(() => {
+  fetch("/api/admin/scenarios")
+    .then((res) => res.json())
+    .then((data) => {
+      setScenarios(data);
+    })
+    .catch((err) => {
+      console.error("Failed to load scenarios:", err);
+    });
+}, []);
 
     return (
         <div style={{
@@ -340,7 +272,7 @@ function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick })
                         </svg>
                     </div>
                     <div>
-                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>{scenario.questions}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>{scenario.questions?.length || 0}</div>
                         <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>Questions</div>
                     </div>
                 </div>
@@ -530,7 +462,7 @@ function ScenarioBriefing({ scenario, onBack }) {
                             <span style={{
                                 fontSize: '10px', padding: '3px 8px', borderRadius: '999px',
                                 background: 'rgba(99,102,241,0.12)', color: '#818CF8', fontWeight: 600,
-                            }}>{scenario.questions}Q</span>
+                            }}>{scenario.questions?.length || 0}Q</span>
                             <span style={{
                                 fontSize: '10px', padding: '3px 8px', borderRadius: '999px',
                                 background: 'rgba(96,165,250,0.12)', color: '#60A5FA', fontWeight: 600,
@@ -621,7 +553,7 @@ function ScenarioBriefing({ scenario, onBack }) {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             {[
-                                { icon: '🧩', label: 'Total Questions', value: `${scenario.questions} Questions`, color: '#6366F1' },
+                                { icon: '🧩', label: 'Total Questions', value: `${scenario.questions?.length || 0} Questions`, color: '#6366F1' },
                                 { icon: '⏱️', label: 'Time Limit', value: '5 Mins / Question', color: '#60A5FA' },
                             ].map((m, i) => (
                                 <div key={i} style={{

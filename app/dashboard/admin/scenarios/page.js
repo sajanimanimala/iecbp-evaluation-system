@@ -16,7 +16,16 @@ const TYPE_META = {
   'Audio':                { color: '#34D399', bg: 'rgba(52,211,153,0.1)',   border: 'rgba(52,211,153,0.3)'   },
   'Video':                { color: '#FB923C', bg: 'rgba(251,146,60,0.1)',   border: 'rgba(251,146,60,0.3)'   },
 };
-
+const DISPLAY_TYPE = {
+  mcq: "MCQ",
+  short_text: "Short Text",
+  yes_no: "Yes / No + Reasoning",
+  multi_select: "Multi-Select",
+  multi_image: "Multi-Select + Image",
+  drag_rank: "Drag & Drop Ranking",
+  audio: "Audio",
+  video: "Video",
+};
 function TypeBadge({ type }) {
   const m = TYPE_META[type] || { color: '#94A3B8', bg: 'rgba(148,163,184,0.1)', border: 'rgba(148,163,184,0.25)' };
   return (
@@ -54,6 +63,22 @@ const fetchScenarios = async () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [scenarioToDelete, setScenarioToDelete] = useState(null);
   const router = useRouter();
+  const deleteScenario = async (id) => {
+  try {
+    const response = await fetch(`/api/admin/scenarios/${id}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to delete");
+    }
+
+    await fetchScenarios();
+  } catch (error) {
+    console.error(error);
+    alert("Failed to delete scenario");
+  }
+};
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
 
@@ -102,7 +127,7 @@ onClick={() => router.push('/dashboard/admin/scenarios/create')}          style=
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', marginBottom: '0.6rem' }}>
                   <div style={{ width: '34px', height: '34px', borderRadius: '10px', flexShrink: 0, background: isActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)', border: isActive ? '1px solid rgba(99,102,241,0.3)' : '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{s.icon}</div>
                   <div style={{ fontSize: '12px', fontWeight: 700, color: isActive ? '#F8FAFC' : '#94A3B8', lineHeight: 1.35, fontFamily: "'Plus Jakarta Sans', sans-serif", display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    S{s.id}. {s.title}
+                    S{i+1}. {s.title}
                   </div>
                 </div>
 
@@ -113,7 +138,7 @@ onClick={() => router.push('/dashboard/admin/scenarios/create')}          style=
                   </div>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {[
-                      { color: '#60A5FA', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>, action: () => router.push(`/dashboard/admin/scenarios/edit/${selected.id}`) },
+                      { color: '#60A5FA', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>, action: () => router.push(`/dashboard/admin/scenarios/edit/${s.id}`) },
                       { color: '#F87171', icon: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>, action: () => {
     setScenarioToDelete(s);
     setShowDeleteModal(true);
@@ -180,15 +205,19 @@ onClick={() => router.push('/dashboard/admin/scenarios/create')}          style=
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {selected.questions.map((q, i) => (
+                  {[...selected.questions]
+  .sort((a, b) => a.orderNo - b.orderNo)
+  .map((q, i) => (
                     <motion.div key={q.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}
                       style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '1rem 1.1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.875rem' }}>
                         <div style={{ width: '30px', height: '30px', borderRadius: '9px', flexShrink: 0, background: 'linear-gradient(135deg, #6366F1, #7C3AED)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(99,102,241,0.3)' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>Q{q.orderNo}</span>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>Q{i + 1}</span>
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ marginBottom: '6px' }}><TypeBadge type={q.questionType} /></div>
+                          <div style={{ marginBottom: '6px' }}><TypeBadge
+  type={DISPLAY_TYPE[q.questionType] || q.questionType}
+/></div>
                           <p style={{ fontSize: '13px', color: '#CBD5E1', lineHeight: 1.6, margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{q.questionText}</p>
                           {q.options && (
                             <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -365,12 +394,12 @@ onClick={() => router.push('/dashboard/admin/scenarios/create')}          style=
               boxShadow: '0 0 30px rgba(99,102,241,0.4)',
             }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              console.log('Delete Scenario:', scenarioToDelete?.id);
+            onClick={async () => {
+  await deleteScenario(scenarioToDelete.id);
 
-              setShowDeleteModal(false);
-              setScenarioToDelete(null);
-            }}
+  setShowDeleteModal(false);
+  setScenarioToDelete(null);
+}}
             style={{
               height: '54px',
               border: 'none',

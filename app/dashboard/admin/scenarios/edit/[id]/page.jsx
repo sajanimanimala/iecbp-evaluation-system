@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -134,16 +134,6 @@ const SCENARIOS = [
 // The edit page uses internal keys like 'mcq', 'short_text', etc.
 // This maps display label → internal key for the question type selector.
 
-const DISPLAY_TO_EDIT_TYPE = {
-  'MCQ':                  'mcq',
-  'Short Text':           'short_text',
-  'Yes / No + Reasoning': 'yes_no',
-  'Audio':                'audio',
-  'Video':                'video',
-  'Multi-Select':         'multi_select',
-  'Multi-Select + Image': 'multi_image',
-  'Drag & Drop Ranking':  'drag_rank',
-};
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 
@@ -157,6 +147,16 @@ const QUESTION_TYPES = [
   { value: 'drag_rank',    label: 'Drag & Drop Ranking',  icon: '↕️', color: '#F59E0B' },
   { value: 'multi_image',  label: 'Multi Select + Image', icon: '🖼️', color: '#38BDF8' },
 ];
+const DISPLAY_TO_EDIT_TYPE = {
+  "MCQ": "mcq",
+  "Short Text": "short_text",
+  "Yes / No + Reasoning": "yes_no",
+  "Audio": "audio",
+  "Video": "video",
+  "Multi-Select": "multi_select",
+  "Drag & Drop Ranking": "drag_rank",
+  "Multi-Select + Image": "multi_image",
+};
 
 const CATEGORIES = [
   'Healthcare Operations',
@@ -395,13 +395,59 @@ export default function EditScenarioPage() {
   const params = useParams();
   const id = params?.id ?? '1';
 
-  // Find scenario from shared SCENARIOS array — same data source as list page
-  const raw = SCENARIOS.find((s) => String(s.id) === String(id)) || SCENARIOS[0];
 
-  const [name, setName] = useState(raw.title);
-  const [description, setDescription] = useState(raw.description);
-  const [category, setCategory] = useState(raw.category);
-  const [questions, setQuestions] = useState(() => raw.questions.map(toEditQuestion));
+
+  const [name, setName] = useState('');
+const [description, setDescription] = useState('');
+const [category, setCategory] = useState('');
+const [customCategory, setCustomCategory] = useState("");
+const [level, setLevel] = useState('');
+const [icon, setIcon] = useState("🧩");
+const [questions, setQuestions] = useState([]);
+useEffect(() => {
+  const fetchScenario = async () => {
+    try {
+      const response = await fetch(
+        `/api/admin/scenarios/${id}`
+      );
+
+      const data = await response.json();
+
+      console.log(data);
+
+      setName(data.title || "");
+      setDescription(data.description || "");
+      if (CATEGORIES.includes(data.category)) {
+  setCategory(data.category);
+} else {
+  setCategory("Other");
+  setCustomCategory(data.category || "");
+}
+      setLevel(data.level || "");
+      setIcon(data.icon || "🧩");
+
+      setQuestions(
+        (data.questions || []).map((q) => ({
+          id: q.id,
+          number: q.orderNo,
+          type: q.questionType,
+          text: q.questionText,
+          options: (q.options || []).map((o) => ({
+            id: o.id,
+            text: o.optionText || "",
+            imageUrl: o.imageUrl || "",
+          })),
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  if (id) {
+    fetchScenario();
+  }
+}, [id]);
   const [saved, setSaved] = useState(false);
 
   const addQuestion = () => setQuestions((prev) => [...prev, makeQuestion(prev.length + 1)]);
@@ -412,12 +458,41 @@ export default function EditScenarioPage() {
 
   const updateQuestion = (qid, updated) => setQuestions((prev) => prev.map((q) => q.id === qid ? updated : q));
 
-  const handleUpdate = () => {
-    const formData = { id, name, description, category, questions };
-    console.log('Updated Scenario:', formData);
+  const handleUpdate = async () => {
+  try {
+    const response = await fetch(
+      `/api/admin/scenarios/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+  name,
+  description,
+category: category === "Other"
+  ? customCategory
+  : category,  level,
+  questions,
+  icon,
+}),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to update");
+    }
+
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
-  };
+
+setTimeout(() => {
+  router.push("/dashboard/admin/scenarios");
+}, 1500);
+  } catch (error) {
+    console.error(error);
+    alert("Failed to update scenario");
+  }
+};
 
   return (
     <div style={{ maxWidth: '860px' }}>
@@ -430,7 +505,7 @@ export default function EditScenarioPage() {
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.85rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 4px', letterSpacing: '-0.3px' }}>Edit Scenario</h1>
             <p style={{ fontSize: '13px', color: '#64748B', margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              Editing: <span style={{ color: '#94A3B8', fontWeight: 500 }}>{raw.title}</span>
+              Editing: <span style={{ color: '#94A3B8', fontWeight: 500 }}>{name}</span>
             </p>
           </div>
           <div style={{ marginLeft: 'auto', padding: '5px 14px', borderRadius: '999px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '11px', color: '#F59E0B', fontWeight: 600, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>✏️ EDIT MODE</div>
@@ -448,6 +523,29 @@ export default function EditScenarioPage() {
           <InputField label="Scenario Name" required value={name} onChange={setName} placeholder="e.g. Emergency Decision Overload in Healthcare Systems" />
           <InputField label="Scenario Description" required value={description} onChange={setDescription} placeholder="Describe what this scenario is about…" multiline rows={4} />
           <SelectField label="Scenario Category" value={category} onChange={setCategory} options={CATEGORIES} />
+          {category === "Other" && (
+  <InputField
+    label="Custom Category"
+    value={customCategory}
+    onChange={setCustomCategory}
+    placeholder="Enter custom category"
+  />
+)}<SelectField
+  label="Scenario Level"
+  value={level}
+  onChange={setLevel}
+  options={[
+    "Beginner",
+    "Intermediate",
+    "Advanced",
+  ]}
+/>
+<InputField
+  label="Scenario Icon (Emoji)"
+  value={icon}
+  onChange={setIcon}
+  placeholder="🏥"
+/>
         </div>
       </motion.div>
 

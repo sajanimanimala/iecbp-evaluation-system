@@ -26,7 +26,16 @@ const CATEGORIES = [
   'Workplace Collaboration & Productivity',
   'Other',
 ];
-
+const SCENARIO_ICONS = [
+  "🏥",
+  "💰",
+  "📈",
+  "💻",
+  "🛒",
+  "🏢",
+  "🎯",
+  "🧩",
+];
 const TYPE_META = {
   mcq:          { color: '#A78BFA', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.3)' },
   short_text:   { color: '#60A5FA', bg: 'rgba(96,165,250,0.1)',  border: 'rgba(96,165,250,0.3)'  },
@@ -400,7 +409,11 @@ export default function CreateScenarioPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const [customCategory, setCustomCategory] = useState("");
   const [questions, setQuestions] = useState([makeQuestion(1)]);
+  const [level, setLevel] = useState("Beginner");
+  const [icon, setIcon] = useState("🧩");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const addQuestion = () => {
     setQuestions((prev) => [...prev, makeQuestion(prev.length + 1)]);
@@ -419,7 +432,15 @@ export default function CreateScenarioPage() {
     const formData = {
       name,
       description,
-      category,
+      category: category === "Other" ? customCategory : category,
+      icon,
+      level,
+levelColor:
+  level === "Beginner"
+    ? "#22C55E"
+    : level === "Intermediate"
+    ? "#F59E0B"
+    : "#EF4444",
       questions: questions.map((q) => ({
         number: q.number,
         type: q.type,
@@ -440,9 +461,11 @@ export default function CreateScenarioPage() {
       throw new Error("Failed to save scenario");
     }
 
-    alert("Scenario created successfully!");
+   setShowSuccess(true);
 
-    router.push("/dashboard/admin/scenarios");
+setTimeout(() => {
+  router.push("/dashboard/admin/scenarios");
+}, 2000);
   } catch (error) {
     console.error(error);
     alert("Failed to create scenario");
@@ -450,8 +473,56 @@ export default function CreateScenarioPage() {
 };
 
   return (
-    <div style={{ maxWidth: '860px' }}>
+    <>
+  {showSuccess && (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 9999,
+      }}
+    >
+      <div
+        style={{
+          width: '450px',
+          background: 'linear-gradient(145deg, #1E2A40, #24324A)',
+          border: '1px solid rgba(34,197,94,0.25)',
+          borderRadius: '24px',
+          padding: '32px',
+          textAlign: 'center',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        <div style={{ fontSize: '60px', marginBottom: '16px' }}>
+          ✅
+        </div>
 
+        <h2
+          style={{
+            color: '#F8FAFC',
+            marginBottom: '10px',
+          }}
+        >
+          Scenario Created Successfully
+        </h2>
+
+        <p
+          style={{
+            color: '#94A3B8',
+            lineHeight: '1.6',
+          }}
+        >
+          The scenario has been saved and is now available in the evaluation system.
+        </p>
+      </div>
+    </div>
+  )}
+  <div style={{ maxWidth: '860px' }}>
       {/* PAGE HEADER */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
         style={{ marginBottom: '2rem' }}>
@@ -477,6 +548,30 @@ export default function CreateScenarioPage() {
           <InputField label="Scenario Name" required value={name} onChange={setName} placeholder="e.g. Emergency Decision Overload in Healthcare Systems" />
           <InputField label="Scenario Description" required value={description} onChange={setDescription} placeholder="Describe what this scenario is about and what candidates will evaluate…" multiline rows={4} />
           <SelectField label="Scenario Category" value={category} onChange={setCategory} options={CATEGORIES} />
+          {category === "Other" && (
+  <InputField
+    label="Custom Category"
+    value={customCategory}
+    onChange={setCustomCategory}
+    placeholder="Enter custom category"
+  />
+)}
+<SelectField
+  label="Scenario Level"
+  value={level}
+  onChange={setLevel}
+  options={[
+    "Beginner",
+    "Intermediate",
+    "Advanced"
+  ]}
+/>
+<InputField
+  label="Scenario Icon (Emoji)"
+  value={icon}
+  onChange={setIcon}
+  placeholder="🏥"
+/>
         </div>
       </motion.div>
 
@@ -545,5 +640,6 @@ export default function CreateScenarioPage() {
         </motion.button>
       </motion.div>
     </div>
+    </>
   );
 }
