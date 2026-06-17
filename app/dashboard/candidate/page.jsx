@@ -14,15 +14,15 @@ export default function Home() {
     const [hoveredCard, setHoveredCard] = useState(null);
     const [scenarios, setScenarios] = useState([]);
     useEffect(() => {
-  fetch("/api/admin/scenarios")
-    .then((res) => res.json())
-    .then((data) => {
-      setScenarios(data);
-    })
-    .catch((err) => {
-      console.error("Failed to load scenarios:", err);
-    });
-}, []);
+        fetch("/api/admin/scenarios")
+            .then((res) => res.json())
+            .then((data) => {
+                setScenarios(data);
+            })
+            .catch((err) => {
+                console.error("Failed to load scenarios:", err);
+            });
+    }, []);
 
     return (
         <div style={{
@@ -166,10 +166,12 @@ export default function Home() {
 }
 
 function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick }) {
+    const scenarioLevel = scenario?.level || 'Unknown';
+    const scenarioCategory = scenario?.category || 'Uncategorized';
     const levelAccent =
-        scenario.level === 'Beginner'
+        scenarioLevel === 'Beginner'
             ? '#4ADE80'
-            : scenario.level === 'Intermediate'
+            : scenarioLevel === 'Intermediate'
                 ? '#3B82F6'
                 : '#F97316';
 
@@ -223,16 +225,16 @@ function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick })
                     padding: '4px 12px', borderRadius: '999px', fontSize: '11px',
                     fontWeight: 600, letterSpacing: '0.5px',
                     background:
-                        scenario.level === 'Beginner' ? 'rgba(74,222,128,0.12)'
-                            : scenario.level === 'Intermediate' ? 'rgba(59,130,246,0.12)'
+                        scenarioLevel === 'Beginner' ? 'rgba(74,222,128,0.12)'
+                            : scenarioLevel === 'Intermediate' ? 'rgba(59,130,246,0.12)'
                                 : 'rgba(249,115,22,0.12)',
                     border:
-                        scenario.level === 'Beginner' ? '1px solid rgba(74,222,128,0.25)'
-                            : scenario.level === 'Intermediate' ? '1px solid rgba(59,130,246,0.25)'
+                        scenarioLevel === 'Beginner' ? '1px solid rgba(74,222,128,0.25)'
+                            : scenarioLevel === 'Intermediate' ? '1px solid rgba(59,130,246,0.25)'
                                 : '1px solid rgba(249,115,22,0.25)',
                     color: levelAccent,
                 }}>
-                    {scenario.level.toUpperCase()}
+                    {scenarioLevel.toUpperCase()}
                 </div>
             </div>
 
@@ -240,7 +242,7 @@ function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick })
                 fontSize: '11px', fontWeight: 600, letterSpacing: '0.6px',
                 color: levelAccent, marginBottom: '0.5rem',
             }}>
-                {scenario.category.toUpperCase()}
+                {scenarioCategory.toUpperCase()}
             </div>
 
             <h3 style={{
