@@ -10,6 +10,9 @@ export default function ProfilePage() {
     const [candidate, setCandidate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [deleteError, setDeleteError] = useState('');
 
     useEffect(() => {
         let mounted = true;
@@ -44,6 +47,32 @@ export default function ProfilePage() {
         load();
         return () => { mounted = false; };
     }, [router, searchParams]);
+
+    async function handleDeleteAccount() {
+        setDeleteError('');
+        setDeleteLoading(true);
+
+        try {
+            const res = await fetch('/api/auth/delete-account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                setDeleteError(data?.message || 'Failed to delete account');
+                setDeleteLoading(false);
+                return;
+            }
+
+            // Account deleted successfully, redirect to landing page
+            router.push('/');
+        } catch (err) {
+            console.error('Delete account error:', err);
+            setDeleteError('Unexpected error occurred');
+            setDeleteLoading(false);
+        }
+    }
 
     if (loading) {
         return (
@@ -96,13 +125,74 @@ export default function ProfilePage() {
                             <div style={{ color: '#E2E8F0', fontSize: '16px', fontWeight: 600 }}>Verified</div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                             <button onClick={() => router.push('/dashboard/candidate')} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#94A3B8', fontWeight: 700 }}>Back to Dashboard</button>
                             <button onClick={() => router.push('/change-password')} style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366F1,#7C3AED)', color: '#fff', fontWeight: 700 }}>Change Password</button>
                         </div>
+
+                        <button onClick={() => setShowDeleteConfirm(true)} style={{ width: '100%', padding: '12px', borderRadius: '10px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', fontWeight: 700 }}>Delete Account</button>
                     </div>
                 )}
             </div>
+
+            {showDeleteConfirm && (
+                <div style={{
+                    position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.5)', zIndex: 999, padding: '3rem'
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(145deg,#0f172a,#111827)', padding: '2.5rem', borderRadius: '16px',
+                        border: '1px solid rgba(255,255,255,0.06)', maxWidth: '420px'
+                    }}>
+                        <h3 style={{
+                            fontFamily: "'Playfair Display', serif", color: '#F8FAFC',
+                            fontSize: '1.25rem', marginBottom: '1rem', fontWeight: 700
+                        }}>Delete Account</h3>
+
+                        <p style={{
+                            color: '#CBD5E1', fontSize: '14px', lineHeight: 1.6, marginBottom: '1.5rem'
+                        }}>
+                            Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently removed.
+                        </p>
+
+                        {deleteError && (
+                            <div style={{
+                                marginBottom: '1rem', padding: '10px', borderRadius: '8px',
+                                background: 'rgba(239,68,68,0.08)', color: '#FCA5A5', fontSize: '13px'
+                            }}>
+                                {deleteError}
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={deleteLoading}
+                                style={{
+                                    flex: 1, padding: '12px', borderRadius: '10px',
+                                    background: 'transparent', border: '1px solid rgba(255,255,255,0.1)',
+                                    color: '#94A3B8', fontWeight: 700, cursor: 'pointer',
+                                    opacity: deleteLoading ? 0.6 : 1
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={deleteLoading}
+                                style={{
+                                    flex: 1, padding: '12px', borderRadius: '10px',
+                                    background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)',
+                                    color: '#FCA5A5', fontWeight: 700, cursor: 'pointer',
+                                    opacity: deleteLoading ? 0.6 : 1
+                                }}
+                            >
+                                {deleteLoading ? 'Deleting...' : 'Delete Account'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
