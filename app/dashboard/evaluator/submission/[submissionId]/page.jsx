@@ -70,7 +70,7 @@ export default function SubmissionDetailPage({ params }) {
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
             <button onClick={() => router.push('/dashboard/evaluator')} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer' }}>← Back to submissions</button>
-            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/ai-score`)} style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>View AI Score</button>
+            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/evaluation`)} style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>View Evaluation</button>
           </div>
         </div>
 

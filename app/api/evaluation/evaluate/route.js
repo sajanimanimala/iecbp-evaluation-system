@@ -29,6 +29,20 @@ export async function POST(req) {
 
     const { generateSignals } = await import('../../../services/signalService.js');
     const signals = await generateSignals(submissionId);
+    console.log("SIGNALS:", signals);
+
+    const { calculateScores } = await import('../../../services/scoringService.js');
+    const scores = calculateScores({
+      understanding: signals.understanding,
+      awareness: signals.awareness,
+      decision: signals.decision,
+      actionability: signals.actionability,
+      clarity: signals.clarity,
+      evidenceCounts: evidenceSummary
+    });
+
+    console.log("EVIDENCE COUNTS:", evidenceSummary);
+    console.log("FINAL INDICES:", scores);
 
     // STEP 2 — format answers for engine
     const formattedAnswers = dbAnswers.map((a) => ({
@@ -45,20 +59,6 @@ export async function POST(req) {
 
     console.log("EVALUATION RESULT:", result);
 
-    const totalEvidenceCount =
-      evidenceSummary.causeCount +
-      evidenceSummary.decisionCount +
-      evidenceSummary.riskCount +
-      evidenceSummary.stakeholderCount +
-      evidenceSummary.actionCount;
-
-    const capabilityIndex =
-      (signals.understanding + signals.awareness + signals.decision + signals.actionability + signals.clarity) / 5;
-    const confidenceIndex =
-      (signals.decision + signals.actionability) / 2;
-    const coverageIndex =
-      Math.min(5, Math.max(1, 1 + totalEvidenceCount / 2));
-
     // STEP 4 — store evaluation result
     const saved =
       await prisma.evaluation.create({
@@ -69,9 +69,9 @@ export async function POST(req) {
           awareness: signals.awareness,
           decision: signals.decision,
           actionability: signals.actionability,
-          capabilityIndex,
-          confidenceIndex,
-          coverageIndex
+          capabilityIndex: scores.capabilityIndex,
+          confidenceIndex: scores.confidenceIndex,
+          coverageIndex: scores.coverageIndex
         }
       });
 

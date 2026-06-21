@@ -301,6 +301,33 @@ export default function EvaluatorDashboardPage() {
                                             fontSize: '11px',
                                             textTransform: 'uppercase',
                                         }}>Status</th>
+                                        <th style={{
+                                            padding: '1.25rem',
+                                            textAlign: 'left',
+                                            color: '#94A3B8',
+                                            fontWeight: 600,
+                                            letterSpacing: '0.3px',
+                                            fontSize: '11px',
+                                            textTransform: 'uppercase',
+                                        }}>Capability</th>
+                                        <th style={{
+                                            padding: '1.25rem',
+                                            textAlign: 'left',
+                                            color: '#94A3B8',
+                                            fontWeight: 600,
+                                            letterSpacing: '0.3px',
+                                            fontSize: '11px',
+                                            textTransform: 'uppercase',
+                                        }}>Confidence</th>
+                                        <th style={{
+                                            padding: '1.25rem',
+                                            textAlign: 'left',
+                                            color: '#94A3B8',
+                                            fontWeight: 600,
+                                            letterSpacing: '0.3px',
+                                            fontSize: '11px',
+                                            textTransform: 'uppercase',
+                                        }}>Coverage</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -338,6 +365,15 @@ export default function EvaluatorDashboardPage() {
                                                     </td>
                                                     <td style={{ padding: '1.25rem' }}>
                                                         <StatusBadge status={submission.status} />
+                                                    </td>
+                                                    <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
+                                                        {submission.capabilityIndex != null ? submission.capabilityIndex : '--'}
+                                                    </td>
+                                                    <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
+                                                        {submission.confidenceIndex != null ? submission.confidenceIndex : '--'}
+                                                    </td>
+                                                    <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
+                                                        {submission.coverageIndex != null ? submission.coverageIndex : '--'}
                                                     </td>
                                                 </motion.tr>
                                             ))

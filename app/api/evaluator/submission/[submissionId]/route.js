@@ -52,10 +52,37 @@ export async function GET(req) {
       orderBy: { questionId: 'asc' },
     });
 
-    const evaluationResult = await prisma.evaluationResult.findFirst({
-      where: { submissionId },
+    const evaluation = await prisma.evaluation.findFirst({
+      where: { responseId: submissionId },
       orderBy: { id: 'desc' },
     });
+
+    const answerIds = answers.map(answer => answer.id);
+    const evidenceRecords = answerIds.length > 0
+      ? await prisma.evidence.findMany({
+          where: {
+            responseId: { in: answerIds },
+          },
+          orderBy: { id: 'asc' },
+        })
+      : [];
+
+    const evidence = {
+      CAUSE: [],
+      DECISION: [],
+      RISK: [],
+      STAKEHOLDER: [],
+      ACTION: [],
+    };
+
+    for (const record of evidenceRecords) {
+      if (evidence[record.type]) {
+        evidence[record.type].push({
+          keyword: record.keyword,
+          sentence: record.sentence,
+        });
+      }
+    }
 
     const questionBank = questionBanks[submission.scenarioId] || [];
     const questions = answers.map(answer => {
@@ -78,13 +105,17 @@ export async function GET(req) {
         date: submission.submittedAt,
         status: 'pending',
         questions,
-        ai: evaluationResult ? {
-          overall: evaluationResult.overallScore,
-          understanding: evaluationResult.understanding,
-          awareness: evaluationResult.awareness,
-          decision: evaluationResult.decision,
-          clarity: evaluationResult.clarity,
+        ai: evaluation ? {
+          understanding: evaluation.understanding,
+          awareness: evaluation.awareness,
+          decision: evaluation.decision,
+          actionability: evaluation.actionability,
+          clarity: evaluation.clarity,
+          capabilityIndex: evaluation.capabilityIndex,
+          confidenceIndex: evaluation.confidenceIndex,
+          coverageIndex: evaluation.coverageIndex,
         } : null,
+        evidence,
       },
     });
   } catch (error) {
