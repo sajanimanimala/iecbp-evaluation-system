@@ -14,7 +14,7 @@ export async function POST(req) {
     const cookieStore = await cookies();
 
     const token =
-  cookieStore.get('iecbp_session')?.value;
+      cookieStore.get('iecbp_session')?.value;
 
     if (!token) {
 
@@ -70,13 +70,15 @@ export async function POST(req) {
       examAttempt
     );
 
-    return Response.json({
+    const responsePayload = {
       success: true,
-
       attemptId: examAttempt.id,
-
       startTime: examAttempt.start_time,
-    });
+    };
+
+    console.log("START API RETURNING:", responsePayload);
+
+    return Response.json(responsePayload);
 
   } catch (error) {
 

@@ -142,3 +142,23 @@ model Notification {
 
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+model Evaluation {
+ id Int @id @default(autoincrement())
+ responseId Int
+ understanding Int
+ clarity Int
+ awareness Int
+ decision Int
+ actionability Int
+ capabilityIndex Float
+ confidenceIndex Float
+ coverageIndex Float
+ createdAt DateTime @default(now())
+}
+model Evidence {
+ id Int @id @default(autoincrement())
+ responseId Int
+ type String
+ keyword String
+ sentence String
+}

@@ -23,11 +23,18 @@ export async function POST(req) {
 
     console.log("DB ANSWERS:", dbAnswers);
 
+    const { extractEvidence } = await import('../../../services/evidenceService.js');
+    const evidenceSummary = await extractEvidence(submissionId);
+    console.log("EVIDENCE SUMMARY:", evidenceSummary);
+
+    const { generateSignals } = await import('../../../services/signalService.js');
+    const signals = await generateSignals(submissionId);
+
     // STEP 2 — format answers for engine
     const formattedAnswers = dbAnswers.map((a) => ({
-  questionId: `q${a.questionId}`,
-  answer: a.answer
-}));
+      questionId: `q${a.questionId}`,
+      answer: a.answer
+    }));
     console.log("FORMATTED:", formattedAnswers);
 
     // STEP 3 — run evaluation engine
@@ -38,37 +45,37 @@ export async function POST(req) {
 
     console.log("EVALUATION RESULT:", result);
 
+    const totalEvidenceCount =
+      evidenceSummary.causeCount +
+      evidenceSummary.decisionCount +
+      evidenceSummary.riskCount +
+      evidenceSummary.stakeholderCount +
+      evidenceSummary.actionCount;
+
+    const capabilityIndex =
+      (signals.understanding + signals.awareness + signals.decision + signals.actionability + signals.clarity) / 5;
+    const confidenceIndex =
+      (signals.decision + signals.actionability) / 2;
+    const coverageIndex =
+      Math.min(5, Math.max(1, 1 + totalEvidenceCount / 2));
+
     // STEP 4 — store evaluation result
     const saved =
-      await prisma.evaluationResult.create({
+      await prisma.evaluation.create({
         data: {
-
-          submissionId,
-
-          scenarioId,
-
-          overallScore:
-            result.overallScore,
-
-          understanding:
-            result.signals.understanding,
-
-          awareness:
-            result.signals.awareness,
-
-          decision:
-            result.signals.decision,
-
-          clarity:
-            result.signals.clarity,
-
-          feedback:
-            result.feedback,
-
-          evaluatedQuestions:
-            result.evaluatedQuestions
+          responseId: Number(submissionId),
+          understanding: signals.understanding,
+          clarity: signals.clarity,
+          awareness: signals.awareness,
+          decision: signals.decision,
+          actionability: signals.actionability,
+          capabilityIndex,
+          confidenceIndex,
+          coverageIndex
         }
       });
+
+    console.log("EVALUATION SAVED:", saved);
 
     return Response.json({
       success: true,
