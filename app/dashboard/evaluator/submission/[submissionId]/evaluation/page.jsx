@@ -137,35 +137,6 @@ export default function EvaluationDetailsPage() {
                 ))}
               </div>
             </div>
-
-            <div style={{ background: 'linear-gradient(145deg, #1B273A, #22314A)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '1.75rem' }}>
-              <h2 style={{ color: '#F8FAFC', fontSize: '1.4rem', marginBottom: '1rem' }}>Evidence</h2>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {EVIDENCE_GROUPS.map(group => {
-                  const items = submission.evidence?.[group] || [];
-                  return (
-                    <div key={group} style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '18px', padding: '1.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '1rem' }}>
-                        <div style={{ color: '#E2E8F0', fontWeight: 700, fontSize: '1rem' }}>{group}</div>
-                        <div style={{ color: '#94A3B8', fontSize: '0.85rem' }}>{items.length} item{items.length === 1 ? '' : 's'}</div>
-                      </div>
-                      {items.length === 0 ? (
-                        <div style={{ color: '#94A3B8', fontSize: '0.95rem' }}>No evidence found for this category.</div>
-                      ) : (
-                        <div style={{ display: 'grid', gap: '0.75rem' }}>
-                          {items.map((evidenceItem, idx) => (
-                            <div key={`${group}-${idx}`} style={{ background: '#0F172A', borderRadius: '16px', padding: '1rem', border: '1px solid rgba(255,255,255,0.06)' }}>
-                              <div style={{ color: '#A5B4FC', fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.5rem' }}>{evidenceItem.keyword}</div>
-                              <div style={{ color: '#CBD5E1', fontSize: '0.95rem', lineHeight: 1.7 }}>{evidenceItem.sentence}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
       </main>

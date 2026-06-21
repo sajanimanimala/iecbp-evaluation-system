@@ -114,6 +114,7 @@ export async function GET(req) {
           capabilityIndex: evaluation.capabilityIndex,
           confidenceIndex: evaluation.confidenceIndex,
           coverageIndex: evaluation.coverageIndex,
+          overallScore: parseFloat(((evaluation.understanding + evaluation.awareness + evaluation.decision + evaluation.actionability) / 4).toFixed(2))
         } : null,
         evidence,
       },

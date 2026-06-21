@@ -45,6 +45,7 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
   );
   const [direction, setDirection] = useState(1);
   const [validationError, setValidationError] = useState('');
+  const [hasFinished, setHasFinished] = useState(false);
 
   const totalQuestions = questions.length;
 
@@ -72,20 +73,23 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
           clearInterval(interval);
 
           if (isLast) {
-  const finalTimeSpent = Math.floor(
-    (Date.now() - questionStartTime) / 1000
-  );
+            if (!hasFinished) {
+              setHasFinished(true);
+              const finalTimeSpent = Math.floor(
+                (Date.now() - questionStartTime) / 1000
+              );
 
-  onFinish({
-    answers,
-    questionTimings: {
-      ...questionTimings,
-      [currentQuestion.id]: finalTimeSpent
-    }
-  });
+              onFinish({
+                answers,
+                questionTimings: {
+                  ...questionTimings,
+                  [currentQuestion.id]: finalTimeSpent
+                }
+              });
+            }
 
-  return { ...prev, [currentIndex]: 0 };
-}
+            return { ...prev, [currentIndex]: 0 };
+          }
 
           const nextIndex = currentIndex + 1;
           setDirection(1);
@@ -214,13 +218,16 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
       [currentQuestion.id]: timeSpent
     });
     if (isLast) {
-      onFinish({
-        answers,
-        questionTimings: {
-          ...questionTimings,
-          [currentQuestion.id]: timeSpent
-        }
-      });
+      if (!hasFinished) {
+        setHasFinished(true);
+        onFinish({
+          answers,
+          questionTimings: {
+            ...questionTimings,
+            [currentQuestion.id]: timeSpent
+          }
+        });
+      }
       return;
     }
 

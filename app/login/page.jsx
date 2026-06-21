@@ -23,10 +23,12 @@ export default function LoginPage() {
         }
         setLoading(true);
         try {
-            const res = await fetch('/api/auth/login', {
+            const loginEndpoint = new URL('/api/auth/login', window.location.origin).toString();
+            const res = await fetch(loginEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
+                cache: 'no-store'
             });
             const data = await res.json();
             if (!res.ok) {

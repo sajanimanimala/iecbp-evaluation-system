@@ -66,11 +66,12 @@ export default function SubmissionDetailPage({ params }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
           <div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.9rem, 3vw, 2.6rem)', fontWeight: 700, color: '#F8FAFC', margin: '0 0 0.5rem', lineHeight: 1.1 }}>Submission Details</h1>
-            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, margin: 0 }}>Review the submitted answers for the selected candidate code and view AI scoring.</p>
+            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, margin: 0 }}>Review the submitted answers and evaluation summary for the selected candidate.</p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
             <button onClick={() => router.push('/dashboard/evaluator')} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer' }}>← Back to submissions</button>
             <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/evaluation`)} style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>View Evaluation</button>
+            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/question-scores`)} style={{ background: 'linear-gradient(135deg, #10B981, #14B8A6)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>Question wise score</button>
           </div>
         </div>
 
