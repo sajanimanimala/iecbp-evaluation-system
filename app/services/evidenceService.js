@@ -1,0 +1,140 @@
+import { prisma } from "../../lib/prisma.js";
+
+export const EVIDENCE_KEYWORDS = {
+    CAUSE: [
+        "because",
+        "due to",
+        "therefore",
+        "hence",
+        "root cause",
+        "dependency"
+    ],
+
+    DECISION: [
+        "choose",
+        "prioritize",
+        "recommend",
+        "should",
+        "must",
+        "select"
+    ],
+
+    RISK: [
+        "risk",
+        "impact",
+        "issue",
+        "challenge",
+        "blocker",
+        "threat"
+    ],
+
+    STAKEHOLDER: [
+        "stakeholder",
+        "team",
+        "customer",
+        "client",
+        "manager",
+        "user"
+    ],
+
+    ACTION: [
+        "implement",
+        "execute",
+        "monitor",
+        "track",
+        "review",
+        "assign"
+    ]
+};
+
+function getSentenceContainingKeyword(text, keyword) {
+    if (!text || !keyword) return text;
+    const normalizedKeyword = keyword.toLowerCase();
+    const sentences = text
+        .replace(/\s+/g, ' ')
+        .split(/(?<=[.!?;])\s+/);
+
+    for (const sentence of sentences) {
+        if (sentence.toLowerCase().includes(normalizedKeyword)) {
+            return sentence.trim();
+        }
+    }
+
+    return text.trim();
+}
+
+export async function extractEvidence(submissionId) {
+    if (!submissionId || Number.isNaN(Number(submissionId))) {
+        throw new Error("Invalid submissionId provided to extractEvidence");
+    }
+
+    const answers = await prisma.answer.findMany({
+        where: { submissionId: Number(submissionId) }
+    });
+
+    const answerIds = answers.map((answer) => answer.id);
+    if (answerIds.length > 0) {
+        await prisma.evidence.deleteMany({
+            where: { responseId: { in: answerIds } }
+        });
+    }
+
+    const evidenceRecords = [];
+    const seenEvidence = new Set();
+    const counts = {
+        causeCount: 0,
+        decisionCount: 0,
+        riskCount: 0,
+        stakeholderCount: 0,
+        actionCount: 0
+    };
+
+    for (const answer of answers) {
+        const originalText = answer.answer || "";
+        const normalizedText = originalText.toLowerCase();
+
+        for (const [type, keywords] of Object.entries(EVIDENCE_KEYWORDS)) {
+            for (const keyword of keywords) {
+                if (keyword && normalizedText.includes(keyword)) {
+                    const evidenceSentence = getSentenceContainingKeyword(originalText, keyword);
+                    const record = {
+                        responseId: answer.id,
+                        type,
+                        keyword,
+                        sentence: evidenceSentence
+                    };
+                    const recordKey = `${record.responseId}|${record.type}|${record.keyword}|${record.sentence}`;
+                    if (seenEvidence.has(recordKey)) continue;
+                    seenEvidence.add(recordKey);
+                    evidenceRecords.push(record);
+
+                    switch (type) {
+                        case "CAUSE":
+                            counts.causeCount += 1;
+                            break;
+                        case "DECISION":
+                            counts.decisionCount += 1;
+                            break;
+                        case "RISK":
+                            counts.riskCount += 1;
+                            break;
+                        case "STAKEHOLDER":
+                            counts.stakeholderCount += 1;
+                            break;
+                        case "ACTION":
+                            counts.actionCount += 1;
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    if (evidenceRecords.length > 0) {
+        await prisma.evidence.createMany({
+            data: evidenceRecords
+        });
+    }
+
+    return counts;
+}

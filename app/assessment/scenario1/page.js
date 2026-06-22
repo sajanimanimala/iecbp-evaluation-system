@@ -45,6 +45,9 @@ export default function Scenario1Assessment() {
         console.log("START API RESPONSE:", data);
 
         setAttemptId(data.attemptId);
+        sessionStorage.setItem('iecbp_attemptId', String(data.attemptId));
+        console.log("ATTEMPT CREATED AT PAGE (scenario1):", data.attemptId);
+        console.log("ATTEMPT ID STORED:", data.attemptId);
 
       } catch (error) {
 
@@ -74,6 +77,7 @@ export default function Scenario1Assessment() {
 
       setQuestionTimings(data.questionTimings);
 
+      console.log("ATTEMPT ID USED (scenario1 handleFinish):", attemptId);
       const response = await fetch('/api/submissions', {
 
         method: 'POST',

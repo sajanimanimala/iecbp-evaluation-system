@@ -18,6 +18,9 @@ export default function Scenario4Assessment() {
 
       const data = await res.json();
       setAttemptId(data.attemptId);
+      sessionStorage.setItem('iecbp_attemptId', String(data.attemptId));
+      console.log("ATTEMPT CREATED AT PAGE (scenario4):", data.attemptId);
+      console.log("ATTEMPT ID STORED:", data.attemptId);
     };
 
     startExamAttempt();
@@ -29,6 +32,7 @@ export default function Scenario4Assessment() {
 
   const handleFinish = async () => {
     try {
+      console.log("ATTEMPT ID USED (scenario4 handleFinish):", attemptId);
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: {

@@ -1,11 +1,14 @@
 'use client';
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import DashboardHeader from '../../../../../components/DashboardHeader';
-import { fetchSession, redirectPathForRole } from '../../../../../components/auth/auth';
 
-export default function SubmissionDetailPage({ params }) {
-  const { submissionId } = React.use(params);
+import React, { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import DashboardHeader from '../../../../../../components/DashboardHeader';
+import { fetchSession, redirectPathForRole } from '../../../../../../components/auth/auth';
+
+const EVIDENCE_GROUPS = ['CAUSE', 'DECISION', 'RISK', 'STAKEHOLDER', 'ACTION'];
+
+export default function EvaluationDetailsPage() {
+  const { submissionId } = useParams();
   const router = useRouter();
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,7 +17,7 @@ export default function SubmissionDetailPage({ params }) {
   useEffect(() => {
     let mounted = true;
 
-    async function load() {
+    async function loadSubmission() {
       const sessionUser = await fetchSession();
       if (!sessionUser) {
         router.replace('/login');
@@ -30,22 +33,25 @@ export default function SubmissionDetailPage({ params }) {
         const data = await res.json();
         if (!mounted) return;
         if (!res.ok || !data.success) {
-          setError(data.message || data.error || 'Unable to load submission');
+          setError(data.message || data.error || 'Unable to load evaluation details');
+          setSubmission(null);
         } else {
           setSubmission(data.submission);
         }
       } catch (err) {
         if (!mounted) return;
-        setError(err.message || 'Unable to load submission');
+        setError(err.message || 'Unable to load evaluation details');
       } finally {
         if (!mounted) return;
         setLoading(false);
       }
     }
 
-    load();
+    loadSubmission();
     return () => { mounted = false; };
   }, [submissionId, router]);
+
+  const ai = submission?.ai;
 
   return (
     <div style={{
@@ -65,21 +71,21 @@ export default function SubmissionDetailPage({ params }) {
       <main style={{ position: 'relative', zIndex: 1, padding: '3rem 2.5rem 3rem', maxWidth: '1280px', margin: '0 auto' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
           <div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.9rem, 3vw, 2.6rem)', fontWeight: 700, color: '#F8FAFC', margin: '0 0 0.5rem', lineHeight: 1.1 }}>Submission Details</h1>
-            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, margin: 0 }}>Review the submitted answers and evaluation summary for the selected candidate.</p>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(1.9rem, 3vw, 2.6rem)', fontWeight: 700, color: '#F8FAFC', margin: '0 0 0.5rem', lineHeight: 1.1 }}>Evaluation Details</h1>
+            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, margin: 0 }}>Review the evaluation scores, indices, and evidence extracted from the submission.</p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-            <button onClick={() => router.push('/dashboard/evaluator')} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer' }}>← Back to submissions</button>
-            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/evaluation`)} style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>View Evaluation</button>
-            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/question-scores`)} style={{ background: 'linear-gradient(135deg, #10B981, #14B8A6)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>Question wise score</button>
+            <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}`)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer' }}>← Back to submission</button>
           </div>
         </div>
 
         {loading ? (
-          <div style={{ padding: '2rem', borderRadius: '20px', background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.06)', color: '#CBD5E1' }}>Loading submission...</div>
+          <div style={{ padding: '2rem', borderRadius: '20px', background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.06)', color: '#CBD5E1' }}>Loading evaluation details...</div>
         ) : error ? (
           <div style={{ padding: '2rem', borderRadius: '20px', background: 'rgba(244,63,94,0.12)', border: '1px solid rgba(248,113,113,0.25)', color: '#FBCFE8' }}>{error}</div>
-        ) : submission ? (
+        ) : !submission ? (
+          <div style={{ padding: '2rem', borderRadius: '20px', background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.06)', color: '#CBD5E1' }}>Submission not found.</div>
+        ) : (
           <div style={{ display: 'grid', gap: '1.5rem' }}>
             <div style={{ background: 'linear-gradient(145deg, #1B273A, #22314A)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
               <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
@@ -96,26 +102,43 @@ export default function SubmissionDetailPage({ params }) {
                   <div style={{ color: '#F8FAFC', fontSize: '1.25rem', fontWeight: 700 }}>{new Date(submission.date).toLocaleString()}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#94A3B8', fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Status</div>
-                  <div style={{ color: '#F8FAFC', fontSize: '1.25rem', fontWeight: 700, textTransform: 'capitalize' }}>{submission.status}</div>
+                  <div style={{ color: '#94A3B8', fontSize: '12px', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>Submission ID</div>
+                  <div style={{ color: '#F8FAFC', fontSize: '1.25rem', fontWeight: 700 }}>{submission.id}</div>
                 </div>
               </div>
             </div>
 
-            <div style={{ background: 'linear-gradient(145deg, #1B273A, #22314A)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '1.75rem' }}>
-              <h2 style={{ color: '#F8FAFC', fontSize: '1.4rem', marginBottom: '1rem' }}>Questions & Answers</h2>
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {submission.questions.map((question, index) => (
-                  <div key={question.id} style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '18px', padding: '1.25rem' }}>
-                    <div style={{ color: '#E2E8F0', fontWeight: 700, marginBottom: '0.75rem' }}>Q{index + 1}. {question.question}</div>
-                    <div style={{ color: '#CBD5E1', whiteSpace: 'pre-wrap', lineHeight: 1.7 }}>{question.answer}</div>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                {[
+                  { label: 'Understanding', value: ai?.understanding },
+                  { label: 'Awareness', value: ai?.awareness },
+                  { label: 'Decision', value: ai?.decision },
+                  { label: 'Actionability', value: ai?.actionability },
+                  { label: 'Clarity', value: ai?.clarity },
+                ].map(item => (
+                  <div key={item.label} style={{ background: 'linear-gradient(145deg, #1F2A40, #252F43)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '1.5rem' }}>
+                    <div style={{ color: '#94A3B8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>{item.label}</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '2rem', fontWeight: 700 }}>{typeof item.value === 'number' ? item.value : '--'}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                {[
+                  { label: 'Capability Index', value: ai?.capabilityIndex },
+                  { label: 'Confidence Index', value: ai?.confidenceIndex },
+                  { label: 'Coverage Index', value: ai?.coverageIndex },
+                ].map(item => (
+                  <div key={item.label} style={{ background: 'linear-gradient(145deg, #1F2A40, #252F43)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', padding: '1.5rem' }}>
+                    <div style={{ color: '#94A3B8', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>{item.label}</div>
+                    <div style={{ color: '#F8FAFC', fontSize: '1.5rem', fontWeight: 700 }}>{typeof item.value === 'number' ? item.value : '--'}</div>
                   </div>
                 ))}
               </div>
             </div>
-
           </div>
-        ) : null}
+        )}
       </main>
     </div>
   );

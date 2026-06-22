@@ -40,11 +40,9 @@ export default function Scenario5Assessment() {
 
         if (data.success) {
           setAttemptId(data.attemptId);
-
-          console.log(
-            "ATTEMPT ID:",
-            data.attemptId
-          );
+          sessionStorage.setItem('iecbp_attemptId', String(data.attemptId));
+          console.log("ATTEMPT CREATED AT PAGE (scenario5):", data.attemptId);
+          console.log("ATTEMPT ID STORED:", data.attemptId);
         }
 
       } catch (err) {
@@ -66,6 +64,7 @@ export default function Scenario5Assessment() {
 
   const handleFinish = async () => {
     try {
+      console.log("ATTEMPT ID USED (scenario5 handleFinish):", attemptId);
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: {

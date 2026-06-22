@@ -24,24 +24,26 @@ export async function GET() {
     });
 
     const submissionIds = submissions.map(submission => submission.id);
-    const evaluationResults = await prisma.evaluationResult.findMany({
+    const evaluations = await prisma.evaluation.findMany({
       where: {
-        submissionId: { in: submissionIds },
+        responseId: { in: submissionIds },
       },
     });
-    const resultBySubmission = new Map(
-      evaluationResults.map(result => [result.submissionId, result])
+    const evaluationBySubmission = new Map(
+      evaluations.map(evaluation => [evaluation.responseId, evaluation])
     );
 
     const payload = submissions.map(submission => {
-      const result = resultBySubmission.get(submission.id);
+      const evaluation = evaluationBySubmission.get(submission.id);
       return {
         id: submission.id,
         candidateCode: submission.candidate?.candidate_code || submission.attempt?.candidate?.candidate_code || 'Unknown',
         scenario: scenarioNames[submission.scenarioId] || `Scenario ${submission.scenarioId}`,
         date: submission.submittedAt,
         status: 'pending',
-        aiScore: result?.overallScore ?? 0,
+        capabilityIndex: evaluation?.capabilityIndex ?? null,
+        confidenceIndex: evaluation?.confidenceIndex ?? null,
+        coverageIndex: evaluation?.coverageIndex ?? null,
       };
     });
 

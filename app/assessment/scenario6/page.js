@@ -19,6 +19,7 @@ export default function Scenario6Assessment() {
 
       const data = await res.json();
       setAttemptId(data.attemptId);
+      console.log("ATTEMPT CREATED AT PAGE (scenario6):", data.attemptId);
     };
 
     startExamAttempt();
@@ -30,12 +31,15 @@ export default function Scenario6Assessment() {
 
   const handleFinish = async () => {
     try {
+      console.log("ATTEMPT ID USED (scenario6 handleFinish):", attemptId);
+      console.log("ATTEMPT ID SENT:", attemptId);
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          attemptId,
           scenarioId: scenario6Meta.id,
           answers,
         }),

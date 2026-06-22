@@ -13,20 +13,56 @@ export async function POST(req) {
 
     const body = await req.json();
 
+    console.log("SUBMISSION BODY:", body);
+
     const {
       scenarioId,
       answers,
       attemptId
     } = body;
 
-    // ─────────────────────────────────────
-    // STEP 1 — Create submission
-    // ─────────────────────────────────────
+    const normalizedAttemptId = Number(attemptId);
+    const normalizedScenarioId = Number(scenarioId);
+    const hasAnswers = answers && typeof answers === 'object' && !Array.isArray(answers);
 
-    if (!attemptId) {
+    console.log("VALIDATION CHECKPOINT:", {
+      attemptId,
+      normalizedAttemptId,
+      attemptIdType: typeof attemptId,
+      scenarioId,
+      normalizedScenarioId,
+      scenarioIdType: typeof scenarioId,
+      answersType: Array.isArray(answers) ? 'array' : typeof answers,
+      answersCount: hasAnswers ? Object.keys(answers).length : 0
+    });
+
+    if (!Number.isInteger(normalizedAttemptId) || normalizedAttemptId <= 0) {
+      console.error("SUBMISSION ERROR: invalid or missing attemptId", { attemptId });
       return Response.json({
         success: false,
-        message: 'Attempt ID is required',
+        message: 'Attempt ID is required and must be a positive integer',
+        attemptId
+      }, {
+        status: 400,
+      });
+    }
+
+    if (!Number.isInteger(normalizedScenarioId) || normalizedScenarioId <= 0) {
+      console.error("SUBMISSION ERROR: invalid or missing scenarioId", { scenarioId });
+      return Response.json({
+        success: false,
+        message: 'Scenario ID is required and must be a positive integer',
+        scenarioId
+      }, {
+        status: 400,
+      });
+    }
+
+    if (!hasAnswers || Object.keys(answers).length === 0) {
+      console.error("SUBMISSION ERROR: missing answers", { answers });
+      return Response.json({
+        success: false,
+        message: 'Answers are required for submission',
       }, {
         status: 400,
       });
@@ -34,7 +70,7 @@ export async function POST(req) {
 
     const attempt = await prisma.examAttempt.findUnique({
       where: {
-        id: Number(attemptId),
+        id: normalizedAttemptId,
       },
     });
 

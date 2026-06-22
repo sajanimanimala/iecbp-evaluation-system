@@ -293,6 +293,22 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
     setSubmitError('');
 
     try {
+      let attemptToUse = attemptId || sessionStorage.getItem('iecbp_attemptId');
+
+      if (!attemptToUse) {
+        // fallback: create a new attempt if missing
+        const startRes = await fetch('/api/assessment/start', { method: 'POST' });
+        const startData = await startRes.json();
+        console.log('START API RESPONSE:', startData);
+        if (startData && startData.attemptId) {
+          attemptToUse = startData.attemptId;
+          sessionStorage.setItem('iecbp_attemptId', String(attemptToUse));
+          console.log('ATTEMPT ID STORED:', attemptToUse);
+        }
+      }
+
+      console.log("ATTEMPT ID USED:", attemptToUse);
+      console.log('SUBMISSION PAYLOAD:', { attemptId: attemptToUse, scenarioId: meta.id, answers });
 
       // STEP 1 — Save answers + evaluation
       const saveRes = await fetch('/api/submissions', {
@@ -303,7 +319,7 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
         body: JSON.stringify({
           scenarioId: meta.id,
           answers,
-          attemptId,
+          attemptId: attemptToUse,
           questionTimings
         })
       });
@@ -355,8 +371,22 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
 
 
     try {
-
       setSubmitting(true);
+
+      let attemptToUse = attemptId || sessionStorage.getItem('iecbp_attemptId');
+      if (!attemptToUse) {
+        const startRes = await fetch('/api/assessment/start', { method: 'POST' });
+        const startData = await startRes.json();
+        console.log('START API RESPONSE:', startData);
+        if (startData && startData.attemptId) {
+          attemptToUse = startData.attemptId;
+          sessionStorage.setItem('iecbp_attemptId', String(attemptToUse));
+          console.log('ATTEMPT ID STORED:', attemptToUse);
+        }
+      }
+
+      console.log("ATTEMPT ID USED:", attemptToUse);
+      console.log('SUBMISSION PAYLOAD:', { attemptId: attemptToUse, scenarioId: meta.id, answers });
 
       // STEP 1 — Save answers + evaluation
       const saveRes = await fetch('/api/submissions', {
@@ -369,7 +399,7 @@ export default function SubmitScreen({ meta, questions, answers, onRestart, onBa
         body: JSON.stringify({
           scenarioId: meta.id,
           answers,
-          attemptId,
+          attemptId: attemptToUse,
           questionTimings
         })
       });
