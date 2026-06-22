@@ -47,7 +47,10 @@ export async function POST(req) {
       const answer = dbAnswers.find((a) => a.id === record.responseId);
       if (!answer) continue;
       const items = evidenceByQuestionId.get(answer.questionId) || [];
-      items.push({ type: record.type, keyword: record.keyword, sentence: record.sentence });
+      const duplicate = items.some((item) => item.type === record.type && item.keyword === record.keyword && item.sentence === record.sentence);
+      if (!duplicate) {
+        items.push({ type: record.type, keyword: record.keyword, sentence: record.sentence });
+      }
       evidenceByQuestionId.set(answer.questionId, items);
     }
 
@@ -83,7 +86,11 @@ export async function POST(req) {
 
     console.log("EVALUATION RESULT:", result);
 
-    // STEP 4 — store evaluation result
+    // STEP 4 — clear any existing evaluation row for this submission to avoid duplicates
+    await prisma.evaluation.deleteMany({
+      where: { responseId: Number(submissionId) }
+    });
+
     const saved =
       await prisma.evaluation.create({
         data: {

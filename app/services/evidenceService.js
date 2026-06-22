@@ -72,7 +72,15 @@ export async function extractEvidence(submissionId) {
         where: { submissionId: Number(submissionId) }
     });
 
+    const answerIds = answers.map((answer) => answer.id);
+    if (answerIds.length > 0) {
+        await prisma.evidence.deleteMany({
+            where: { responseId: { in: answerIds } }
+        });
+    }
+
     const evidenceRecords = [];
+    const seenEvidence = new Set();
     const counts = {
         causeCount: 0,
         decisionCount: 0,
@@ -95,7 +103,9 @@ export async function extractEvidence(submissionId) {
                         keyword,
                         sentence: evidenceSentence
                     };
-
+                    const recordKey = `${record.responseId}|${record.type}|${record.keyword}|${record.sentence}`;
+                    if (seenEvidence.has(recordKey)) continue;
+                    seenEvidence.add(recordKey);
                     evidenceRecords.push(record);
 
                     switch (type) {
