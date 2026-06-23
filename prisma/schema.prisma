@@ -181,3 +181,25 @@ model Evidence {
  keyword String
  sentence String
 }
+model AIEvidenceAudit {
+ id Int @id @default(autoincrement())
+ submissionId Int
+ audit Json
+ createdAt DateTime @default(now())
+}
+model CapabilityTrait {
+ id Int @id @default(autoincrement())
+ submissionId Int
+ traitName String
+ confidence Float
+ evidence Json
+ createdAt DateTime @default(now())
+}
+model AIInsight {
+ id Int @id @default(autoincrement())
+ submissionId Int
+ strengths Json
+ improvements Json
+ recommendations Json
+ createdAt DateTime @default(now())
+}

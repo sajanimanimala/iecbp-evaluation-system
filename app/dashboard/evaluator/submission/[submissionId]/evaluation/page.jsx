@@ -137,6 +137,49 @@ export default function EvaluationDetailsPage() {
                 ))}
               </div>
             </div>
+
+            {/* AI MISSED EVIDENCE SECTION */}
+            <div style={{ background: 'linear-gradient(145deg, #2D1F3B, #3A2849)', border: '1px solid rgba(168,85,247,0.15)', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ color: '#E9D5FF', fontSize: '1.25rem', fontWeight: 700, margin: 0, marginBottom: '0.5rem' }}>AI Missed Evidence Suggestions</h2>
+                <p style={{ color: '#D1D5DB', fontSize: '14px', margin: 0 }}>Evidence that the AI detected but was missed by the rule-based system.</p>
+              </div>
+
+              {!submission?.aiMissedEvidence || submission.aiMissedEvidence.length === 0 ? (
+                <div style={{ padding: '1.5rem', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '12px', color: '#CBD5E1', textAlign: 'center' }}>
+                  No AI missed evidence suggestions available.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {submission.aiMissedEvidence.map((item, idx) => (
+                    <div key={idx} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '12px', padding: '1rem', display: 'grid', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <div style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#F3E8FF', fontSize: '12px', fontWeight: 600 }}>
+                            Q{item.questionId}
+                          </div>
+                          <div style={{ background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.4)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#E9D5FF', fontSize: '12px', fontWeight: 600 }}>
+                            {item.type}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#94A3B8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Evidence</div>
+                        <div style={{ color: '#E2E8F0', fontSize: '13px', lineHeight: 1.5, fontStyle: 'italic', background: 'rgba(139,92,246,0.1)', padding: '0.75rem', borderRadius: '6px', borderLeft: '3px solid rgba(168,85,247,0.5)' }}>
+                          {item.sentence}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ color: '#94A3B8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Reason</div>
+                        <div style={{ color: '#CBD5E1', fontSize: '13px', lineHeight: 1.4 }}>
+                          {item.reason}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>

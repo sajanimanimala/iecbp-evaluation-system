@@ -24,10 +24,36 @@ export async function GET(req) {
 
     const questionsById = new Map(questions.map((q) => [q.id, q.questionText]));
 
-    const questionScoresWithText = questionScores.map((score) => ({
-      ...score,
-      questionText: questionsById.get(score.questionId) || `Question ${score.questionId}`
-    }));
+    // FETCH: AI Missed Evidence from AIEvidenceAudit
+    const aiAudit = await prisma.aIEvidenceAudit.findFirst({
+      where: { submissionId },
+      orderBy: { id: 'desc' }
+    });
+
+    let allAiMissedEvidence = [];
+    if (aiAudit) {
+      console.log('AI AUDIT RECORD FOUND');
+      const missedEvidence = aiAudit.audit?.missedEvidence || [];
+      allAiMissedEvidence = Array.isArray(missedEvidence) ? missedEvidence : [];
+      console.log('AI MISSED EVIDENCE COUNT:', allAiMissedEvidence.length);
+    }
+
+    const questionScoresWithText = questionScores.map((score) => {
+      // Match AI missed evidence to this question by questionId
+      const questionAiMissedEvidence = allAiMissedEvidence.filter(
+        item => Number(item.questionId) === Number(score.questionId)
+      );
+
+      if (questionAiMissedEvidence.length > 0) {
+        console.log('QUESTION AI EVIDENCE ATTACHED');
+      }
+
+      return {
+        ...score,
+        questionText: questionsById.get(score.questionId) || `Question ${score.questionId}`,
+        aiMissedEvidence: questionAiMissedEvidence
+      };
+    });
 
     return Response.json({ success: true, questionScores: questionScoresWithText });
   } catch (error) {

@@ -132,6 +132,38 @@ export default function QuestionScoresPage() {
                             </div>
                           );
                         })}
+
+                        {/* AI MISSED EVIDENCE SECTION */}
+                        <div style={{ background: 'rgba(45, 31, 59, 0.6)', borderRadius: '14px', padding: '1rem', border: '1px solid rgba(168,85,247,0.2)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.75rem' }}>
+                            <div style={{ color: '#E9D5FF', fontWeight: 700 }}>AI Missed Evidence Suggestions</div>
+                            <button onClick={() => setOpenEvidence(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#E2E8F0', padding: '6px 12px', cursor: 'pointer' }}>Close</button>
+                          </div>
+                          {!question.aiMissedEvidence || question.aiMissedEvidence.length === 0 ? (
+                            <div style={{ color: '#94A3B8' }}>No AI missed evidence suggestions available.</div>
+                          ) : (
+                            <div style={{ display: 'grid', gap: '0.75rem' }}>
+                              {question.aiMissedEvidence.map((item, index) => (
+                                <div key={index} style={{ background: '#111827', borderRadius: '14px', padding: '12px', border: '1px solid rgba(168,85,247,0.15)' }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+                                    <div style={{ background: 'linear-gradient(135deg, #A855F7, #7C3AED)', borderRadius: '6px', padding: '4px 8px', color: '#F3E8FF', fontSize: '11px', fontWeight: 600 }}>
+                                      Q{item.questionId}
+                                    </div>
+                                    <div style={{ background: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.4)', borderRadius: '6px', padding: '4px 8px', color: '#E9D5FF', fontSize: '11px', fontWeight: 600 }}>
+                                      {item.type}
+                                    </div>
+                                  </div>
+                                  <div style={{ color: '#E2E8F0', fontSize: '13px', lineHeight: 1.5, fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                                    {item.sentence}
+                                  </div>
+                                  <div style={{ color: '#CBD5E1', fontSize: '12px', lineHeight: 1.4 }}>
+                                    <span style={{ color: '#94A3B8', fontWeight: 600 }}>Reason:</span> {item.reason}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

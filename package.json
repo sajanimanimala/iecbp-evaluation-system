@@ -10,6 +10,7 @@
     "seed": "node prisma/seed.js"
   },
   "dependencies": {
+    "@google/genai": "^2.9.0",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^2.4.3",
     "framer-motion": "^12.40.0",

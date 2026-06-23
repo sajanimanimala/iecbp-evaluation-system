@@ -141,6 +141,23 @@ export async function POST(req) {
 
     console.log("QUESTION SCORES SAVED:", questionScoreData.length);
 
+    // STEP 5 — AI Evidence Audit
+    console.log("AI AUDIT STARTED");
+
+    const { auditEvidenceGaps } = await import('../../../services/aiEvidenceAuditService.js');
+    const auditResult = await auditEvidenceGaps(Number(submissionId));
+    console.log("AI AUDIT RESULT:", auditResult);
+
+    const auditSaved = await prisma.aIEvidenceAudit.create({
+      data: {
+        submissionId: Number(submissionId),
+        audit: auditResult
+      }
+    });
+
+    console.log("AI AUDIT SAVED");
+    console.log("AI AUDIT COMPLETED");
+
     console.log("EVALUATION SAVED:", saved);
 
     return Response.json({
