@@ -60,11 +60,11 @@ export async function GET(req) {
     const answerIds = answers.map(answer => answer.id);
     const evidenceRecords = answerIds.length > 0
       ? await prisma.evidence.findMany({
-          where: {
-            responseId: { in: answerIds },
-          },
-          orderBy: { id: 'asc' },
-        })
+        where: {
+          responseId: { in: answerIds },
+        },
+        orderBy: { id: 'asc' },
+      })
       : [];
 
     const evidence = {
@@ -95,6 +95,21 @@ export async function GET(req) {
       };
     });
 
+    // FETCH: AI Missed Evidence from AIEvidenceAudit
+    const aiAudit = await prisma.aIEvidenceAudit.findFirst({
+      where: { submissionId },
+      orderBy: { id: 'desc' }
+    });
+
+    let aiMissedEvidence = [];
+    if (aiAudit) {
+      console.log('AI AUDIT RECORD FOUND');
+      const missedEvidence = aiAudit.audit?.missedEvidence || [];
+      aiMissedEvidence = Array.isArray(missedEvidence) ? missedEvidence : [];
+      console.log('AI MISSED EVIDENCE COUNT:', aiMissedEvidence.length);
+      console.log('AI MISSED EVIDENCE SENT TO DASHBOARD');
+    }
+
     return Response.json({
       success: true,
       submission: {
@@ -117,6 +132,7 @@ export async function GET(req) {
           overallScore: parseFloat(((evaluation.understanding + evaluation.awareness + evaluation.decision + evaluation.actionability) / 4).toFixed(2))
         } : null,
         evidence,
+        aiMissedEvidence,
       },
     });
   } catch (error) {
