@@ -52,6 +52,8 @@ export default function EvaluationDetailsPage() {
   }, [submissionId, router]);
 
   const ai = submission?.ai;
+  const capabilityTraits = submission?.capabilityTraits || [];
+  const capabilityInsights = submission?.capabilityInsights || { strengths: [], improvements: [], recommendations: [] };
 
   return (
     <div style={{
@@ -136,6 +138,109 @@ export default function EvaluationDetailsPage() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* CAPABILITY TRAITS SECTION */}
+            <div style={{ background: 'linear-gradient(145deg, #2D3B1F, #384A28)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ color: '#DCFCE7', fontSize: '1.25rem', fontWeight: 700, margin: 0, marginBottom: '0.5rem' }}>Capability Traits</h2>
+                <p style={{ color: '#D1D5DB', fontSize: '14px', margin: 0 }}>AI-identified capability traits supported by evidence.</p>
+              </div>
+
+              {!capabilityTraits || capabilityTraits.length === 0 ? (
+                <div style={{ padding: '1.5rem', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', color: '#CBD5E1', textAlign: 'center' }}>
+                  No capability traits available.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {capabilityTraits.map((trait, idx) => (
+                    <div key={idx} style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem', display: 'grid', gap: '0.75rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                        <div style={{ color: '#DCFCE7', fontSize: '1rem', fontWeight: 700 }}>{trait.traitName}</div>
+                        <div style={{ background: 'linear-gradient(135deg, #22C55E, #16A34A)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#F0FDF4', fontSize: '12px', fontWeight: 600 }}>
+                          {Math.round(trait.confidence * 100)}%
+                        </div>
+                      </div>
+                      {trait.evidence && Array.isArray(trait.evidence) && trait.evidence.length > 0 && (
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          <div style={{ color: '#94A3B8', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Supporting Evidence</div>
+                          {trait.evidence.map((ev, i) => (
+                            <div key={i} style={{ background: 'rgba(34,197,94,0.1)', padding: '0.75rem', borderRadius: '6px', borderLeft: '3px solid rgba(34,197,94,0.5)', fontSize: '13px' }}>
+                              <div style={{ color: '#A5F3FC', fontWeight: 600, marginBottom: '0.25rem' }}>{ev.source}</div>
+                              {ev.type && <div style={{ color: '#94A3B8', fontSize: '11px', marginBottom: '0.25rem' }}>[{ev.type}]</div>}
+                              <div style={{ color: '#E2E8F0', lineHeight: 1.4 }}>{ev.text}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* CAPABILITY INSIGHTS SECTION */}
+            <div style={{ background: 'linear-gradient(145deg, #1F2A40, #252F43)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ color: '#BFDBFE', fontSize: '1.25rem', fontWeight: 700, margin: 0, marginBottom: '0.5rem' }}>Capability Insights</h2>
+                <p style={{ color: '#D1D5DB', fontSize: '14px', margin: 0 }}>Key strengths, improvement areas, and actionable recommendations.</p>
+              </div>
+
+              {!capabilityInsights || (!capabilityInsights.strengths?.length && !capabilityInsights.improvements?.length && !capabilityInsights.recommendations?.length) ? (
+                <div style={{ padding: '1.5rem', background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '12px', color: '#CBD5E1', textAlign: 'center' }}>
+                  No capability insights available.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  {/* Strengths */}
+                  <div style={{ background: 'linear-gradient(145deg, #1e472a, #225533)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '12px', padding: '1rem' }}>
+                    <div style={{ color: '#86EFAC', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>✓</span> Strengths
+                    </div>
+                    {capabilityInsights?.strengths?.length ? (
+                      <ul style={{ margin: 0, paddingLeft: '1.5rem', display: 'grid', gap: '0.5rem' }}>
+                        {capabilityInsights.strengths.map((item, i) => (
+                          <li key={i} style={{ color: '#D1FAE5', fontSize: '13px', lineHeight: 1.5 }}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div style={{ color: '#94A3B8', fontSize: '13px' }}>No strengths identified.</div>
+                    )}
+                  </div>
+
+                  {/* Improvements */}
+                  <div style={{ background: 'linear-gradient(145deg, #7c2d12, #92400e)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: '12px', padding: '1rem' }}>
+                    <div style={{ color: '#FDBA74', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>→</span> Improvements
+                    </div>
+                    {capabilityInsights?.improvements?.length ? (
+                      <ul style={{ margin: 0, paddingLeft: '1.5rem', display: 'grid', gap: '0.5rem' }}>
+                        {capabilityInsights.improvements.map((item, i) => (
+                          <li key={i} style={{ color: '#FED7AA', fontSize: '13px', lineHeight: 1.5 }}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div style={{ color: '#94A3B8', fontSize: '13px' }}>No improvements identified.</div>
+                    )}
+                  </div>
+
+                  {/* Recommendations */}
+                  <div style={{ background: 'linear-gradient(145deg, #1e3a8a, #1e40af)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '12px', padding: '1rem' }}>
+                    <div style={{ color: '#93C5FD', fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>★</span> Recommendations
+                    </div>
+                    {capabilityInsights?.recommendations?.length ? (
+                      <ul style={{ margin: 0, paddingLeft: '1.5rem', display: 'grid', gap: '0.5rem' }}>
+                        {capabilityInsights.recommendations.map((item, i) => (
+                          <li key={i} style={{ color: '#DBEAFE', fontSize: '13px', lineHeight: 1.5 }}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div style={{ color: '#94A3B8', fontSize: '13px' }}>No recommendations available.</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* AI MISSED EVIDENCE SECTION */}

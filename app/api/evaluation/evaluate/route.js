@@ -160,10 +160,83 @@ export async function POST(req) {
 
     console.log("EVALUATION SAVED:", saved);
 
-    return Response.json({
+    // ---- AI Orchestration: Traits -> Insights ----
+    // Inserted here so evaluation and AI audit are persisted before running AI pipeline
+    let savedTraits = [];
+    let insightResult = null;
+    let insightError = null;
+
+    try {
+      console.log("AI TRAITS STARTED");
+      const { generateAiTraits } = await import('../../../services/aiTraitService.js');
+
+      const traitResult = await generateAiTraits({ submissionId: Number(submissionId) });
+
+      if (!traitResult || !traitResult.success || !Array.isArray(traitResult.traits)) {
+        return Response.json({ success: false, stage: "traits", error: traitResult && traitResult.error ? traitResult.error : "Failed to generate traits" }, { status: 500 });
+      }
+
+      // Delete any existing CapabilityTrait rows for this submission
+      await prisma.capabilityTrait.deleteMany({ where: { submissionId: Number(submissionId) } });
+
+      // Save validated traits
+      for (const trait of traitResult.traits) {
+        const created = await prisma.capabilityTrait.create({
+          data: {
+            submissionId: Number(submissionId),
+            traitName: trait.traitName,
+            confidence: trait.confidence,
+            evidence: trait.evidence,
+          }
+        });
+        savedTraits.push(created);
+      }
+
+      console.log("AI TRAITS SAVED");
+
+    } catch (error) {
+      console.error("AI TRAITS FAILED", { message: error.message });
+      return Response.json({ success: false, stage: "traits", error: error.message }, { status: 500 });
+    }
+
+    try {
+      console.log("CAPABILITY INSIGHT STARTED");
+      const { generateCapabilityInsights } = await import('../../../services/capabilityInsightService.js');
+
+      insightResult = await generateCapabilityInsights(Number(submissionId));
+
+      const createdInsight = await prisma.capabilityInsight.create({
+        data: {
+          submissionId: Number(submissionId),
+          strengths: insightResult.strengths,
+          improvements: insightResult.improvements,
+          recommendations: insightResult.recommendations,
+        }
+      });
+
+      console.log("CAPABILITY INSIGHT SAVED");
+    } catch (error) {
+      insightError = error.message || "Insight generation failed";
+      console.error("CAPABILITY INSIGHT FAILED", { message: insightError });
+      // Do not rollback saved traits; continue to return success with insightError
+    }
+
+    console.log("AI PIPELINE COMPLETED");
+
+    // Final success response including evaluation, traits, and insights (or insightError)
+    const responseBody = {
       success: true,
-      result: saved
-    });
+      evaluation: saved,
+      traits: savedTraits.map(t => ({ traitName: t.traitName, confidence: t.confidence, evidence: t.evidence })),
+    };
+
+    if (insightError) {
+      responseBody.insightError = insightError;
+    } else if (insightResult) {
+      responseBody.insights = insightResult;
+    }
+
+    return Response.json(responseBody, { status: 200 });
 
   } catch (error) {
 
