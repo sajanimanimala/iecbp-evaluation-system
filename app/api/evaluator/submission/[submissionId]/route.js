@@ -110,6 +110,35 @@ export async function GET(req) {
       console.log('AI MISSED EVIDENCE SENT TO DASHBOARD');
     }
 
+    // FETCH: Capability Traits for this submission
+    const capabilityTraitRecords = await prisma.capabilityTrait.findMany({
+      where: { submissionId },
+      orderBy: { id: 'asc' }
+    });
+
+    const capabilityTraits = capabilityTraitRecords.map(trait => ({
+      id: trait.id,
+      traitName: trait.traitName,
+      confidence: trait.confidence,
+      evidence: trait.evidence || []
+    }));
+
+    // FETCH: Capability Insights for this submission
+    const insightRecord = await prisma.capabilityInsight.findFirst({
+      where: { submissionId },
+      orderBy: { id: 'desc' }
+    });
+
+    const capabilityInsights = insightRecord ? {
+      strengths: Array.isArray(insightRecord.strengths) ? insightRecord.strengths : [],
+      improvements: Array.isArray(insightRecord.improvements) ? insightRecord.improvements : [],
+      recommendations: Array.isArray(insightRecord.recommendations) ? insightRecord.recommendations : []
+    } : {
+      strengths: [],
+      improvements: [],
+      recommendations: []
+    };
+
     return Response.json({
       success: true,
       submission: {
@@ -133,6 +162,8 @@ export async function GET(req) {
         } : null,
         evidence,
         aiMissedEvidence,
+        capabilityTraits,
+        capabilityInsights,
       },
     });
   } catch (error) {

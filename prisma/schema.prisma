@@ -195,6 +195,14 @@ model CapabilityTrait {
  evidence Json
  createdAt DateTime @default(now())
 }
+model CapabilityInsight {
+ id Int @id @default(autoincrement())
+ submissionId Int
+ strengths Json
+ improvements Json
+ recommendations Json
+ createdAt DateTime @default(now())
+}
 model AIInsight {
  id Int @id @default(autoincrement())
  submissionId Int

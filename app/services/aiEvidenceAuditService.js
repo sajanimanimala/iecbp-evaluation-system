@@ -1,5 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
-import ai from "./geminiClient.js";
+import groq from "./groqClient.js";
 
 const EVIDENCE_TYPES = ["CAUSE", "DECISION", "RISK", "STAKEHOLDER", "ACTION"];
 
@@ -63,14 +63,14 @@ export async function auditEvidenceGaps(submissionId) {
         const auditPrompt = buildAuditPrompt(answerPayload);
         console.log("AI EVIDENCE AUDIT PROMPT CREATED");
 
-        // CALL: Gemini with model fallback
-        if (!ai) {
-            throw new Error("Gemini client not initialized");
+        // CALL: Groq with model fallback
+        if (!groq) {
+            throw new Error("Groq client not initialized");
         }
 
         let response;
         let lastError;
-        const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+        const models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
         const maxAttemptsPerModel = 3;
 
         for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
@@ -78,40 +78,57 @@ export async function auditEvidenceGaps(submissionId) {
 
             // Log model selection
             if (modelIndex === 0) {
-                console.log("GEMINI MODEL:", currentModel);
+                console.log("GROQ MODEL:", currentModel);
             } else {
                 console.log("SWITCHING TO FALLBACK MODEL");
-                console.log("GEMINI MODEL:", currentModel);
+                console.log("GROQ MODEL:", currentModel);
             }
 
             // Try current model up to maxAttemptsPerModel times
             for (let attempt = 1; attempt <= maxAttemptsPerModel; attempt++) {
                 try {
-                    console.log("GEMINI ATTEMPT:", attempt);
+                    console.log("GROQ ATTEMPT:", attempt);
+                    console.log("API KEY EXISTS:", !!process.env.GROQ_API_KEY);
+                    console.log("MODEL:", currentModel);
+                    console.log("PROMPT LENGTH:", auditPrompt.length);
 
-                    response = await ai.models.generateContent({
+                    const groqResponse = await groq.chat.completions.create({
                         model: currentModel,
-                        contents: auditPrompt
+                        messages: [
+                            {
+                                role: "user",
+                                content: auditPrompt,
+                            },
+                        ],
+                        temperature: 0.3,
                     });
 
-                    console.log("GEMINI SUCCESS");
+                    // Normalize to previous shape (text) for existing parsing
+                    response = { text: groqResponse?.choices?.[0]?.message?.content };
+
+                    console.log("GROQ SUCCESS");
                     break; // Success - break attempt loop
                 } catch (error) {
                     lastError = error;
+                    console.error("FULL GROQ ERROR:", error);
+                    console.error("ERROR MESSAGE:", error?.message);
+                    console.error("ERROR STACK:", error?.stack);
                     const errorMessage = error.message || String(error);
                     const isRetryable =
                         error.status === 429 ||
                         error.status === 503 ||
+                        error.status === 500 ||
                         errorMessage.includes("UNAVAILABLE");
 
                     // Non-retryable errors throw immediately
                     if (!isRetryable) {
+                        console.log("GROQ FAILED");
                         throw error;
                     }
 
                     // Retryable errors: retry if attempts remaining
                     if (attempt < maxAttemptsPerModel) {
-                        console.log("GEMINI RETRYING...");
+                        console.log("GROQ RETRYING...");
                         // Wait 2 seconds before retry
                         await new Promise(resolve => setTimeout(resolve, 2000));
                     }
@@ -127,7 +144,7 @@ export async function auditEvidenceGaps(submissionId) {
 
         // If no model succeeded, fail with error
         if (!response) {
-            console.log("GEMINI FAILED AFTER ALL RETRIES");
+            console.log("GROQ FAILED AFTER ALL RETRIES");
             throw lastError || new Error("All models exhausted");
         }
 
