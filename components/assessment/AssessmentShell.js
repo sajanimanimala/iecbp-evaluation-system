@@ -196,6 +196,7 @@ export default function AssessmentShell({ meta, questions, answers, onAnswer, on
 
   // ── Next / Submit ──
   const goNext = useCallback(() => {
+    console.log('goNext', { currentIndex, currentQuestionId: currentQuestion?.id, answer: answers[currentQuestion?.id], currentQuestionType: currentQuestion?.type });
     const error = validateCurrent();
     if (error) {
       setValidationError(error);

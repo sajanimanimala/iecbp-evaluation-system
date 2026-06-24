@@ -32,7 +32,10 @@ export default function ShortTextQuestion({ question, value, onChange, readOnly 
 
         <textarea
           value={value || ''}
-          onChange={(e) => !readOnly && onChange(e.target.value)}
+          onChange={(e) => {
+            console.log('ShortTextQuestion onChange', e.target.value);
+            !readOnly && onChange(e.target.value);
+          }}
           disabled={readOnly}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

@@ -3,13 +3,40 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+function resolveVideoSrc(question) {
+  const candidate = question?.videoSrc
+    ?? question?.videoUrl
+    ?? question?.src
+    ?? question?.url
+    ?? question?.mediaUrl
+    ?? question?.mediaSrc
+    ?? question?.meta?.videoSrc
+    ?? question?.config?.videoSrc;
+
+  if (typeof candidate === 'string' && candidate.trim()) {
+    return candidate.trim();
+  }
+
+  if (question?.scenarioId || question?.scenario_id) {
+    const scenarioId = question.scenarioId ?? question.scenario_id;
+    const questionNumber = question.number ?? question.orderNo;
+    if (questionNumber) {
+      return `/videos/scenario${scenarioId}-q${questionNumber}.mp4`;
+    }
+  }
+
+  return '/videos/default.mp4';
+}
+
 export default function VideoQuestion({ question, value, onChange, readOnly = false }) {
   const [videoState, setVideoState] = useState('idle'); // idle | playing | paused | ended
-  const [hasWatched, setHasWatched] = useState(value?.watched || false);
+  const [hasWatched, setHasWatched] = useState(Boolean(value?.watched));
   const [focused, setFocused] = useState(false);
   const videoRef = useRef(null);
 
   const answer = value?.response || '';
+  const videoSrc = resolveVideoSrc(question);
+  console.log('videoSrc', videoSrc);
   const wordCount = answer ? answer.trim().split(/\s+/).filter(Boolean).length : 0;
   const isComplete = hasWatched && answer.trim().length > 0;
 
@@ -119,12 +146,17 @@ export default function VideoQuestion({ question, value, onChange, readOnly = fa
         >
           <video
             ref={videoRef}
-            src={question.videoSrc}
+            preload="metadata"
+            controls
+            playsInline
+            src={videoSrc}
             onEnded={handleEnded}
             onPlay={() => setVideoState('playing')}
             onPause={() => setVideoState('paused')}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-          />
+          >
+            <source src={videoSrc} type="video/mp4" />
+          </video>
 
           {/* overlay for idle / paused / ended */}
           <AnimatePresence>

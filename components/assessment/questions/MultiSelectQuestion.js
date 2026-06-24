@@ -12,18 +12,51 @@ const OPTION_COLORS = {
 };
 
 export default function MultiSelectQuestion({ question, value, onChange, readOnly = false }) {
-  const selected = value || [];
-  const max = question.maxSelections || 2;
+  const selected = Array.isArray(value) ? value : (typeof value === 'string' ? [value] : []);
+  const max = Number.isFinite(question.maxSelections) ? question.maxSelections : 2;
   const atMax = selected.length >= max;
 
-  const toggle = (key) => {
+  const normalizedOptions = Array.isArray(question.options)
+    ? question.options.map((option, index) => {
+        if (typeof option === 'string') {
+          const text = option.trim();
+          return {
+            key: text || String.fromCharCode(65 + index),
+            text,
+          };
+        }
+
+        if (option && typeof option === 'object') {
+          const text = option.text ?? option.label ?? option.optionText ?? option.value ?? option.title ?? `Option ${index + 1}`;
+          const key = option.key ?? option.value ?? option.id ?? String.fromCharCode(65 + index);
+          return {
+            key: String(key).trim().toUpperCase() || String.fromCharCode(65 + index),
+            text: typeof text === 'string' ? text.trim() : String(text),
+            icon: option.icon,
+          };
+        }
+
+        return {
+          key: String.fromCharCode(65 + index),
+          text: `Option ${index + 1}`,
+        };
+      })
+    : [];
+
+  const toggle = (option) => {
     if (readOnly) return;
-    if (selected.includes(key)) {
-      onChange(selected.filter((k) => k !== key));
-    } else {
-      if (atMax) return;
-      onChange([...selected, key]);
+
+    const optionValue = option?.key;
+    if (!optionValue) return;
+
+    if (selected.includes(optionValue)) {
+      onChange(selected.filter((item) => item !== optionValue));
+      return;
     }
+
+    if (atMax) return;
+
+    onChange([...selected, optionValue]);
   };
 
   return (
@@ -130,8 +163,9 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
 
       {/* option cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        {question.options.map((option, i) => {
-          const isSelected = selected.includes(option.key);
+        {normalizedOptions.map((option, i) => {
+          const optionValue = option.key;
+          const isSelected = selected.includes(optionValue);
           const isDisabled = atMax && !isSelected;
           const colors = OPTION_COLORS[option.key] || OPTION_COLORS.A;
 
@@ -143,7 +177,7 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
               transition={{ duration: 0.3, delay: i * 0.06 }}
               whileHover={!isDisabled ? { y: -2 } : {}}
               whileTap={!isDisabled ? { scale: 0.985 } : {}}
-              onClick={() => toggle(option.key)}
+              onClick={() => toggle(option)}
               style={{
                 display: 'flex', alignItems: 'center', gap: '1rem',
                 padding: '1rem 1.25rem',
@@ -251,7 +285,7 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
                   }}
                 >
                   <span style={{ fontSize: '11px', fontWeight: 800, color: '#fff' }}>
-                    {selected.indexOf(option.key) + 1}
+                    {selected.indexOf(optionValue) + 1}
                   </span>
                 </motion.div>
               )}

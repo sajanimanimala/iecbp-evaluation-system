@@ -1,7 +1,30 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, Reorder } from 'framer-motion';
+
+function buildUniqueItemId(rawId, index, seenIds) {
+  const baseId = String(rawId ?? `item-${index + 1}`)
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9_-]/g, '');
+  const candidate = baseId || `item-${index + 1}`;
+
+  if (!seenIds.has(candidate)) {
+    seenIds.add(candidate);
+    return candidate;
+  }
+
+  let suffix = 2;
+  let uniqueCandidate = `${candidate}-${suffix}`;
+  while (seenIds.has(uniqueCandidate)) {
+    suffix += 1;
+    uniqueCandidate = `${candidate}-${suffix}`;
+  }
+
+  seenIds.add(uniqueCandidate);
+  return uniqueCandidate;
+}
 
 const RANK_COLORS = [
   { bg: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.4)', text: '#818CF8', glow: 'rgba(99,102,241,0.25)', label: '1st' },
@@ -11,28 +34,53 @@ const RANK_COLORS = [
 ];
 
 export default function DragRankQuestion({ question, value, onChange, readOnly = false }) {
-  const initialItems = question.items.map((item) => item.id);
-  const [order, setOrder] = useState(() => {
-    if (value && Array.isArray(value) && value.length === question.items.length) return value;
-    return initialItems;
-  });
-  const [dragging, setDragging] = useState(null);
-  const hasInteracted = useRef(false);
+  const items = Array.isArray(question.items) && question.items.length > 0
+    ? (() => {
+        const seenIds = new Set();
+        return question.items.map((item, index) => {
+          const label = item?.label ?? item?.text ?? item?.optionText ?? item?.value ?? `Item ${index + 1}`;
+          const rawId = item?.id ?? item?.key ?? item?.value ?? label;
+          const id = buildUniqueItemId(rawId, index, seenIds);
 
-  const itemMap = Object.fromEntries(question.items.map((item) => [item.id, item]));
+          return {
+            id,
+            label: typeof label === 'string' ? label.trim() || `Item ${index + 1}` : String(label || `Item ${index + 1}`),
+            icon: item?.icon ?? '🧩',
+          };
+        });
+      })()
+    : [];
+  const initialItems = items.map((item) => item.id);
+  const [order, setOrder] = useState(initialItems);
+  const [dragging, setDragging] = useState(null);
+
+  const itemMap = Object.fromEntries(items.map((item) => [item.id, item]));
+
+  useEffect(() => {
+    if (Array.isArray(value) && value.length === items.length) {
+      setOrder(value);
+    } else if (!Array.isArray(value)) {
+      setOrder(initialItems);
+    }
+  }, [value, items.length, initialItems.join('|')]);
 
   const handleReorder = (newOrder) => {
-    hasInteracted.current = true;
     setOrder(newOrder);
-    onChange(newOrder);
+    if (typeof onChange === 'function') {
+      onChange(newOrder);
+    }
   };
 
-  // mark as answered on first interaction
-  useEffect(() => {
-    if (!value) {
+  const handleDragEnd = () => {
+    setDragging(null);
+    if (typeof onChange === 'function') {
       onChange(order);
     }
-  }, []);
+  };
+
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -65,7 +113,7 @@ export default function DragRankQuestion({ question, value, onChange, readOnly =
         style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
       >
         {order.map((id, index) => {
-          const item = itemMap[id];
+          const item = itemMap[id] || { id, label: id, icon: '🧩' };
           const colors = RANK_COLORS[index] || RANK_COLORS[3];
           const isDragging = dragging === id;
 
@@ -74,7 +122,7 @@ export default function DragRankQuestion({ question, value, onChange, readOnly =
               key={id}
               value={id}
               onDragStart={() => setDragging(id)}
-              onDragEnd={() => setDragging(null)}
+              onDragEnd={handleDragEnd}
               style={{ listStyle: 'none' }}
             >
               <motion.div
@@ -198,7 +246,7 @@ export default function DragRankQuestion({ question, value, onChange, readOnly =
           YOUR ORDER:
         </span>
         {order.map((id, i) => {
-          const item = itemMap[id];
+          const item = itemMap[id] || { id, label: id, icon: '🧩' };
           const colors = RANK_COLORS[i] || RANK_COLORS[3];
           return (
             <div key={id} style={{

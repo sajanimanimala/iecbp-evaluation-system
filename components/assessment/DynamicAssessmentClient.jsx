@@ -6,8 +6,141 @@ import { motion, AnimatePresence } from 'framer-motion';
 import AssessmentShell from './AssessmentShell';
 import SubmitScreen from './SubmitScreen';
 
+function normalizeQuestionType(rawType) {
+  const simplified = String(rawType ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  const typeMap = {
+    short_text: 'short_text',
+    shorttext: 'short_text',
+    short: 'short_text',
+    mcq: 'mcq',
+    multiple_choice: 'mcq',
+    multiplechoice: 'mcq',
+    multiple_choice_question: 'mcq',
+    yes_no: 'yes_no',
+    yesno: 'yes_no',
+    yes_no_reasoning: 'yes_no',
+    multi_select: 'multi_select',
+    multiselect: 'multi_select',
+    multi_image: 'multi_select',
+    multi_select_image: 'multi_select',
+    drag_rank: 'drag_rank',
+    draganddropranking: 'drag_rank',
+    drag_drop: 'drag_rank',
+    audio: 'audio',
+    audio_response: 'audio',
+    video: 'video',
+    video_response: 'video',
+  };
+
+  return typeMap[simplified] || simplified || 'short_text';
+}
+
+function parseOptions(rawOptions) {
+  if (Array.isArray(rawOptions)) {
+    return rawOptions.map((option, optionIndex) => {
+      if (typeof option === 'string') {
+        const trimmed = option.trim();
+        const keyMatch = trimmed.match(/^([A-Za-z])[\s.:-]*(.*)$/);
+        return {
+          key: keyMatch ? keyMatch[1].toUpperCase() : String.fromCharCode(65 + optionIndex),
+          text: keyMatch ? (keyMatch[2] || trimmed).trim() : trimmed,
+        };
+      }
+
+      if (option && typeof option === 'object') {
+        const textValue = option.optionText ?? option.text ?? option.label ?? option.value ?? option.choice ?? option.labelText ?? `Option ${optionIndex + 1}`;
+        const rawKey = option.key ?? option.value ?? option.id ?? String.fromCharCode(65 + optionIndex);
+        const key = String(rawKey).trim().toUpperCase();
+
+        return {
+          key: key.length <= 1 ? key : key[0],
+          text: typeof textValue === 'string' ? textValue.trim() : String(textValue),
+          icon: option.icon ?? undefined,
+          imageUrl: option.imageUrl ?? undefined,
+        };
+      }
+
+      return {
+        key: String.fromCharCode(65 + optionIndex),
+        text: `Option ${optionIndex + 1}`,
+      };
+    });
+  }
+
+  if (typeof rawOptions === 'string') {
+    const trimmed = rawOptions.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parseOptions(parsed);
+    } catch (error) {
+      return trimmed
+        .split(/\n|\r/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => ({
+          key: String.fromCharCode(65 + index),
+          text: line,
+        }));
+    }
+  }
+
+  if (rawOptions && typeof rawOptions === 'object') {
+    if (Array.isArray(rawOptions.choices)) return parseOptions(rawOptions.choices);
+    if (Array.isArray(rawOptions.options)) return parseOptions(rawOptions.options);
+    if (Array.isArray(rawOptions.items)) return parseOptions(rawOptions.items);
+  }
+
+  return [];
+}
+
+function normalizeItems(rawItems, fallbackOptions = []) {
+  const sourceItems = Array.isArray(rawItems) ? rawItems : [];
+  const sourceOptions = Array.isArray(fallbackOptions) ? fallbackOptions : [];
+  const normalized = [];
+
+  const entries = sourceItems.length > 0 ? sourceItems : sourceOptions;
+
+  entries.forEach((entry, index) => {
+    if (typeof entry === 'string') {
+      const label = entry.trim();
+      normalized.push({
+        id: `item-${index + 1}`,
+        label: label || `Item ${index + 1}`,
+        icon: '🧩',
+      });
+      return;
+    }
+
+    if (entry && typeof entry === 'object') {
+      const label = entry.label ?? entry.text ?? entry.optionText ?? entry.value ?? entry.title ?? entry.name ?? '';
+      const rawId = entry.id ?? entry.key ?? entry.value ?? entry.slug ?? '';
+      const id = String(rawId || `item-${index + 1}`).trim();
+      const item = {
+        id: id || `item-${index + 1}`,
+        label: typeof label === 'string' ? label.trim() : String(label || `Item ${index + 1}`),
+        icon: entry.icon ?? '🧩',
+      };
+
+      if (normalized.some((existing) => existing.id === item.id)) {
+        item.id = `item-${index + 1}-${normalized.length + 1}`;
+      }
+
+      normalized.push(item);
+    }
+  });
+
+  return normalized;
+}
+
 function normalizeQuestion(question, index) {
-  const normalizedType = question.questionType || question.type || 'short_text';
+  const normalizedType = normalizeQuestionType(question.questionType || question.type || 'short_text');
   const baseQuestion = {
     id: question.id,
     number: question.orderNo ?? question.number ?? index + 1,
@@ -25,47 +158,24 @@ function normalizeQuestion(question, index) {
     baseQuestion.reasoningPlaceholder = reasoningPlaceholder;
   }
 
-  const maxSelections = question.maxSelections ?? question.meta?.maxSelections ?? question.config?.maxSelections;
+  const maxSelections = question.maxSelections ?? question.meta?.maxSelections ?? question.config?.maxSelections ?? (normalizedType === 'multi_select' ? 2 : undefined);
   if (maxSelections !== undefined) {
     baseQuestion.maxSelections = maxSelections;
   }
 
-  const optionsSource = question.options || question.meta?.options || question.config?.options || question.choices || [];
-  const mappedOptions = Array.isArray(optionsSource)
-    ? optionsSource.map((option, optionIndex) => {
-        if (typeof option === 'string') {
-          return {
-            key: String.fromCharCode(65 + optionIndex),
-            text: option,
-          };
-        }
+  const optionsSource = question.options ?? question.meta?.options ?? question.config?.options ?? question.choices ?? question.rankItems ?? question.items ?? [];
+  const mappedOptions = parseOptions(optionsSource);
+  baseQuestion.options = mappedOptions;
 
-        if (option && typeof option === 'object') {
-          return {
-            key: option.key || String.fromCharCode(65 + optionIndex),
-            text: option.optionText ?? option.text ?? option.label ?? option.value ?? `Option ${optionIndex + 1}`,
-            icon: option.icon ?? undefined,
-            imageUrl: option.imageUrl ?? undefined,
-          };
-        }
-
-        return {
-          key: String.fromCharCode(65 + optionIndex),
-          text: `Option ${optionIndex + 1}`,
-        };
-      })
-    : [];
-
-  if (mappedOptions.length > 0) {
-    baseQuestion.options = mappedOptions;
-  }
-
-  if (normalizedType === 'drag_rank' && mappedOptions.length > 0) {
-    baseQuestion.items = mappedOptions.map((option, optionIndex) => ({
-      id: String(optionIndex + 1),
-      label: option.text,
-      icon: option.icon ?? '🧩',
-    }));
+  if (normalizedType === 'drag_rank') {
+    const normalizedItems = normalizeItems(question.items ?? question.rankItems ?? question.meta?.items ?? question.config?.items ?? [], mappedOptions);
+    baseQuestion.items = normalizedItems.length > 0
+      ? normalizedItems
+      : mappedOptions.map((option, optionIndex) => ({
+          id: `item-${optionIndex + 1}`,
+          label: option.text || `Item ${optionIndex + 1}`,
+          icon: option.icon ?? '🧩',
+        }));
   }
 
   if (normalizedType === 'audio') {
@@ -79,6 +189,19 @@ function normalizeQuestion(question, index) {
     baseQuestion.videoDescription = question.videoDescription || question.meta?.videoDescription || question.config?.videoDescription || 'Watch the scenario video to inform your response.';
     baseQuestion.videoNote = question.videoNote || question.meta?.videoNote || question.config?.videoNote || 'Scenario video reference';
     baseQuestion.placeholder = baseQuestion.placeholder || 'Describe what you observed...';
+  }
+
+  if (normalizedType === 'multi_select' && (question.imageSrc || question.imageUrl || question.meta?.imageSrc || question.config?.imageSrc)) {
+    baseQuestion.imageSrc = question.imageSrc || question.imageUrl || question.meta?.imageSrc || question.config?.imageSrc;
+    baseQuestion.imageCaption = question.imageCaption || question.meta?.imageCaption || question.config?.imageCaption;
+  }
+
+  if (normalizedType === 'short_text' && !baseQuestion.placeholder) {
+    baseQuestion.placeholder = 'Share a thoughtful response in 15-40 meaningful words.';
+  }
+
+  if (normalizedType === 'yes_no' && !baseQuestion.reasoningPlaceholder) {
+    baseQuestion.reasoningPlaceholder = 'Explain your reasoning in detail...';
   }
 
   return baseQuestion;
@@ -118,6 +241,7 @@ export default function DynamicAssessmentClient({ scenario, questions }) {
   }, [started]);
 
   const handleAnswer = (questionId, value) => {
+    console.log('handleAnswer', questionId, value);
     setAnswers((prev) => ({
       ...prev,
       [questionId]: value,

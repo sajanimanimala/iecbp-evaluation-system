@@ -3,6 +3,31 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+function resolveAudioSrc(question) {
+  const candidate = question?.audioSrc
+    ?? question?.audioUrl
+    ?? question?.src
+    ?? question?.url
+    ?? question?.mediaUrl
+    ?? question?.mediaSrc
+    ?? question?.meta?.audioSrc
+    ?? question?.config?.audioSrc;
+
+  if (typeof candidate === 'string' && candidate.trim()) {
+    return candidate.trim();
+  }
+
+  if (question?.scenarioId || question?.scenario_id) {
+    const scenarioId = question.scenarioId ?? question.scenario_id;
+    const questionNumber = question.number ?? question.orderNo;
+    if (questionNumber) {
+      return `/audios/scenario${scenarioId}-q${questionNumber}.mp3`;
+    }
+  }
+
+  return '/audios/default.mp3';
+}
+
 export default function AudioQuestion({ question, value, onChange, readOnly = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -11,75 +36,83 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
   const [showTranscript, setShowTranscript] = useState(false);
   const [focused, setFocused] = useState(false);
   const audioRef = useRef(null);
-  useEffect(() => {
-  const audio = audioRef.current;
+  const transcriptLines = Array.isArray(question.transcript) ? question.transcript : [];
 
-  if (!audio) return;
-
-  const updateTime = () => {
-    setCurrentTime(audio.currentTime);
-
-    const lineDuration =
-      audio.duration / question.transcript.length || 4;
-
-    const lineIndex = Math.floor(audio.currentTime / lineDuration);
-
-    setActiveLine(
-      lineIndex < question.transcript.length
-        ? lineIndex
-        : question.transcript.length - 1
-    );
-  };
-
-  const loaded = () => {
-    setDuration(audio.duration);
-  };
-
-  const ended = () => {
-    setIsPlaying(false);
-    setActiveLine(null);
-
-    onChange({
-      ...value,
-      listened: true,
-      response: answer,
-    });
-  };
-
-  audio.addEventListener('timeupdate', updateTime);
-  audio.addEventListener('loadedmetadata', loaded);
-  audio.addEventListener('ended', ended);
-
-  return () => {
-    audio.removeEventListener('timeupdate', updateTime);
-    audio.removeEventListener('loadedmetadata', loaded);
-    audio.removeEventListener('ended', ended);
-  };
-}, []);
+  const audioSrc = resolveAudioSrc(question);
+  console.log('audioSrc', audioSrc);
 
   const answer = value?.response || '';
-  const hasListened = value?.listened || false;
+
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    const updateTime = () => {
+      setCurrentTime(audio.currentTime || 0);
+
+      if (!transcriptLines.length) return;
+
+      const lineDuration = audio.duration > 0 ? audio.duration / transcriptLines.length : 4;
+      const lineIndex = Math.floor((audio.currentTime || 0) / lineDuration);
+
+      setActiveLine(
+        lineIndex < transcriptLines.length
+          ? lineIndex
+          : transcriptLines.length - 1
+      );
+    };
+
+    const loaded = () => {
+      setDuration(audio.duration || 0);
+      setCurrentTime(audio.currentTime || 0);
+    };
+
+    const ended = () => {
+      setIsPlaying(false);
+      setActiveLine(null);
+      onChange({
+        ...(value || {}),
+        listened: true,
+        response: answer,
+      });
+    };
+
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', loaded);
+    audio.addEventListener('ended', ended);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', loaded);
+      audio.removeEventListener('ended', ended);
+    };
+  }, [answer, onChange, transcriptLines.length, value]);
+
+  const hasListened = Boolean(value?.listened);
   const wordCount = answer ? answer.trim().split(/\s+/).filter(Boolean).length : 0;
 
-  // Simulated playback — cycles through transcript lines
-  const lineDuration = duration / question.transcript.length || 4;
-
+  const lineDuration = duration && transcriptLines.length ? duration / transcriptLines.length : 4;
   const totalDuration = duration || 12;
   const progressPercent = (currentTime / totalDuration) * 100;
 
-  const togglePlay = () => {
-  const audio = audioRef.current;
+  const togglePlay = async () => {
+    const audio = audioRef.current;
 
-  if (!audio) return;
+    if (!audio) return;
 
-  if (audio.paused) {
-    audio.play();
-    setIsPlaying(true);
-  } else {
-    audio.pause();
-    setIsPlaying(false);
-  }
-};
+    if (audio.paused) {
+      try {
+        await audio.play();
+        setIsPlaying(true);
+      } catch (error) {
+        console.error('Audio playback failed:', error);
+      }
+    } else {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  };
 
   const handleSeek = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -88,7 +121,7 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
     const newTime = pct * totalDuration;
     setCurrentTime(newTime);
     const lineIndex = Math.floor(newTime / lineDuration);
-    setActiveLine(lineIndex < question.transcript.length ? lineIndex : null);
+    setActiveLine(lineIndex < transcriptLines.length ? lineIndex : null);
   };
 
   const handleResponse = (text) => {
@@ -110,7 +143,15 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <audio ref={audioRef} src={question.audioSrc} />
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        controls
+        playsInline
+        src={audioSrc}
+      >
+        <source src={audioSrc} type="audio/mpeg" />
+      </audio>
       {/* ── AUDIO PLAYER CARD ── */}
       <div style={{
         background: 'linear-gradient(145deg, #1a2a42, #1e3252)',
@@ -334,7 +375,7 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
                 CONVERSATION TRANSCRIPT
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {question.transcript.map((line, i) => {
+                {transcriptLines.map((line, i) => {
                   const isActive = activeLine === i;
                   return (
                     <motion.div
