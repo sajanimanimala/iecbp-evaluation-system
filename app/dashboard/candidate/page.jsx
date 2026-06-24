@@ -326,7 +326,7 @@ function ScenarioBriefing({ scenario, onBack }) {
     const [activeStep] = useState(0);
 
     const handleStartAssessment = () => {
-        router.push(`/assessment/scenario${scenario.id}`);
+        router.push(`/assessment/${scenario.id}`);
     };
 
     return (

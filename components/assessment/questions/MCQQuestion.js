@@ -13,6 +13,7 @@ const OPTION_COLORS = {
 
 export default function MCQQuestion({ question, value, onChange, readOnly = false }) {
   const [hovered, setHovered] = useState(null);
+  const options = Array.isArray(question.options) ? question.options : [];
 
   return (
     <motion.div
@@ -21,7 +22,7 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
       transition={{ duration: 0.4 }}
       style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}
     >
-      {question.options.map((option, i) => {
+      {options.map((option, i) => {
         const selected = value === option.key;
         const isHov = hovered === option.key;
         const colors = OPTION_COLORS[option.key] || OPTION_COLORS.A;

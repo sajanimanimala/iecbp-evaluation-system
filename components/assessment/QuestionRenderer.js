@@ -9,25 +9,28 @@ import AudioQuestion from './questions/AudioQuestion';
 import VideoQuestion from './questions/VideoQuestion';
 
 export default function QuestionRenderer({ question, value, onChange, readOnly = false }) {
-  switch (question.type) {
+  const normalizedQuestion = question || {};
+  const normalizedType = normalizedQuestion.type || 'short_text';
+
+  switch (normalizedType) {
     case 'short_text':
-      return <ShortTextQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <ShortTextQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'mcq':
-      return <MCQQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <MCQQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'yes_no':
-      return <YesNoQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <YesNoQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'multi_select':
-      return <MultiSelectQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <MultiSelectQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'drag_rank':
-      return <DragRankQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <DragRankQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'audio':
-      return <AudioQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <AudioQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     case 'video':
-      return <VideoQuestion question={question} value={value} onChange={onChange} readOnly={readOnly} />;
+      return <VideoQuestion question={normalizedQuestion} value={value} onChange={onChange} readOnly={readOnly} />;
     default:
       return (
         <div style={{ color: '#94A3B8', fontSize: '14px', padding: '1rem' }}>
-          Unknown question type: {question.type}
+          Unknown question type: {normalizedType}
         </div>
       );
   }
