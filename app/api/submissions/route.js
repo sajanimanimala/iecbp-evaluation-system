@@ -105,9 +105,7 @@ export async function POST(req) {
         scenarioId,
         attemptId: Number(attemptId),
         candidateId,
-        submittedAt: new Date().toLocaleString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-        }),
+       submittedAt: new Date().toISOString(),
       },
     });
 
@@ -151,8 +149,9 @@ export async function POST(req) {
         });
 
         if (user && user.candidate) {
-          const submissionDate = submission.submittedAt.split(',')[0];
-          const submissionTime = submission.submittedAt.split(',')[1]?.trim() || '';
+         const submittedDt = new Date(submission.submittedAt);
+          const submissionDate = submittedDt.toLocaleDateString('en-IN');
+          const submissionTime = submittedDt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
           const emailHtml = assessmentSubmissionEmailTemplate(
             user.name || 'Candidate',

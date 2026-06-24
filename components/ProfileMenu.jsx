@@ -49,6 +49,21 @@ export default function ProfileMenu() {
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <button onClick={() => { setOpen(false); router.push('/dashboard/' + (user?.role === 'ADMIN' ? 'admin' : user?.role === 'EVALUATOR' ? 'evaluator' : 'candidate')); }} style={{ padding: '10px 12px', background: 'transparent', border: 'none', textAlign: 'left', color: '#fff' }}>Dashboard</button>
                         <button onClick={() => { setOpen(false); router.push('/profile'); }} style={{ padding: '10px 12px', background: 'transparent', border: 'none', textAlign: 'left', color: '#fff' }}>Profile</button>
+                        <button
+    onClick={() => {
+        setOpen(false);
+        router.push('/dashboard/candidate/reports');
+    }}
+    style={{
+        padding: '10px 12px',
+        background: 'transparent',
+        border: 'none',
+        textAlign: 'left',
+        color: '#fff'
+    }}
+>
+    Reports
+</button>
                         <hr style={{ border: 'none', height: 1, background: 'rgba(255,255,255,0.03)', margin: '8px 0' }} />
                         <button onClick={handleLogout} style={{ padding: '10px 12px', background: 'transparent', border: 'none', textAlign: 'left', color: '#fff' }}>Logout</button>
                     </div>

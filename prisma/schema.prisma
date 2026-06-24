@@ -211,3 +211,14 @@ model AIInsight {
  recommendations Json
  createdAt DateTime @default(now())
 }
+model EvaluationReport {
+  id               Int       @id @default(autoincrement())
+  submissionId     Int
+  reportData       Json
+  status           String    @default("PENDING")
+  evaluatorComment String?
+  modifiedReport   Json?
+  reviewedBy       Int?
+  reviewedAt       DateTime?
+  createdAt        DateTime  @default(now())
+}

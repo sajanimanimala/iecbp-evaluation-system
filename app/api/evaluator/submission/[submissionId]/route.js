@@ -21,6 +21,26 @@ function parseAnswer(raw) {
   }
 }
 
+function normalizeSubmittedAt(raw) {
+  if (!raw) return raw;
+  const asDate = new Date(raw);
+  if (!isNaN(asDate.getTime())) return asDate.toISOString();
+
+  const m = String(raw).match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  if (m) {
+    const day = parseInt(m[1], 10);
+    const month = parseInt(m[2], 10) - 1;
+    const year = parseInt(m[3], 10);
+    const hour = parseInt(m[4], 10);
+    const minute = parseInt(m[5], 10);
+    const second = m[6] ? parseInt(m[6], 10) : 0;
+    const dt = new Date(year, month, day, hour, minute, second);
+    if (!isNaN(dt.getTime())) return dt.toISOString();
+  }
+
+  return raw;
+}
+
 export async function GET(req) {
   try {
     const pathname = req.nextUrl?.pathname || new URL(req.url, 'http://localhost').pathname;
@@ -146,7 +166,7 @@ export async function GET(req) {
         candidateCode: submission.candidate?.candidate_code || submission.attempt?.candidate?.candidate_code || 'Unknown',
         scenarioId: submission.scenarioId,
         scenario: `Scenario ${submission.scenarioId}`,
-        date: submission.submittedAt,
+        date: normalizeSubmittedAt(submission.submittedAt),
         status: 'pending',
         questions,
         ai: evaluation ? {

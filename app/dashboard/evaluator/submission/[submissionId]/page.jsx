@@ -72,6 +72,21 @@ export default function SubmissionDetailPage({ params }) {
             <button onClick={() => router.push('/dashboard/evaluator')} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#E2E8F0', borderRadius: '12px', padding: '10px 16px', cursor: 'pointer' }}>← Back to submissions</button>
             <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/evaluation`)} style={{ background: 'linear-gradient(135deg, #6366F1, #7C3AED)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>View Evaluation</button>
             <button onClick={() => router.push(`/dashboard/evaluator/submission/${submissionId}/question-scores`)} style={{ background: 'linear-gradient(135deg, #10B981, #14B8A6)', border: 'none', borderRadius: '12px', padding: '10px 16px', color: '#fff', cursor: 'pointer' }}>Question wise score</button>
+            <button
+  onClick={() =>
+    router.push(`/dashboard/evaluator/submission/${submissionId}/report`)
+  }
+  style={{
+    background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 16px',
+    color: '#fff',
+    cursor: 'pointer'
+  }}
+>
+  View Report
+</button>          
           </div>
         </div>
 

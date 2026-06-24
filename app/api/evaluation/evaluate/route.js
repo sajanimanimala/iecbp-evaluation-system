@@ -16,7 +16,15 @@ export async function POST(req) {
 
     // STEP 1 — fetch submission and answers from DB
     const submission = await prisma.submission.findUnique({
-      where: { id: Number(submissionId) }
+      where: { id: Number(submissionId) },
+      include: {
+        candidate: true,
+        attempt: {
+          include: {
+            candidate: true,
+          }
+        }
+      }
     });
 
     const dbAnswers = await prisma.answer.findMany({
@@ -223,10 +231,95 @@ export async function POST(req) {
 
     console.log("AI PIPELINE COMPLETED");
 
-    // Final success response including evaluation, traits, and insights (or insightError)
+    const scenario = await prisma.scenario.findUnique({
+      where: { id: submission.scenarioId }
+    });
+
+    const candidateInfo = {
+      candidateCode: submission.candidate?.candidate_code || submission.attempt?.candidate?.candidate_code || 'Unknown',
+      candidateName: submission.candidate?.name || submission.attempt?.candidate?.name || 'Unknown Candidate',
+      candidateId: submission.candidate?.id || submission.attempt?.candidate?.id || null,
+    };
+
+    const scenarioInfo = {
+      id: submission.scenarioId,
+      title: scenario?.title || `Scenario ${submission.scenarioId}`,
+      description: scenario?.description || null,
+      category: scenario?.category || null,
+    };
+
+    const overallScore = parseFloat(((saved.understanding + saved.awareness + saved.decision + saved.actionability) / 4).toFixed(2));
+
+    const reportPayload = {
+      candidateInfo,
+      scenarioInfo,
+      submissionDate: submission.submittedAt,
+      evaluationScores: {
+        understanding: saved.understanding,
+        awareness: saved.awareness,
+        decision: saved.decision,
+        actionability: saved.actionability,
+        clarity: saved.clarity,
+        overallScore,
+      },
+      capabilityIndices: {
+        capabilityIndex: saved.capabilityIndex,
+        confidenceIndex: saved.confidenceIndex,
+        coverageIndex: saved.coverageIndex,
+      },
+      questionScores: questionScoreData.map((question) => ({
+        questionId: question.questionId,
+        score: question.score,
+        understandingEvidence: question.understandingEvidence,
+        awarenessEvidence: question.awarenessEvidence,
+        decisionEvidence: question.decisionEvidence,
+        actionabilityEvidence: question.actionabilityEvidence,
+        clarityEvidence: question.clarityEvidence,
+      })),
+      aiAudit: auditResult,
+      capabilityTraits: savedTraits.map(trait => ({
+        traitName: trait.traitName,
+        confidence: trait.confidence,
+        evidence: trait.evidence,
+      })),
+      strengths: insightResult?.strengths || [],
+      improvements: insightResult?.improvements || [],
+      recommendations: insightResult?.recommendations || [],
+      generatedAt: new Date().toISOString(),
+    };
+
+    const existingReport = await prisma.evaluationReport.findFirst({
+      where: { submissionId: Number(submissionId) },
+      orderBy: { id: 'desc' }
+    });
+
+    const report = existingReport
+      ? await prisma.evaluationReport.update({
+        where: { id: existingReport.id },
+        data: {
+          reportData: reportPayload,
+          status: 'PENDING',
+          evaluatorComment: null,
+          modifiedReport: null,
+          reviewedBy: null,
+          reviewedAt: null,
+        }
+      })
+      : await prisma.evaluationReport.create({
+        data: {
+          submissionId: Number(submissionId),
+          reportData: reportPayload,
+          status: 'PENDING',
+        }
+      });
+
+    console.log("EVALUATION REPORT SAVED", report.id);
+
+    // Final success response including evaluation, traits, insights, and report
     const responseBody = {
       success: true,
       evaluation: saved,
+      report,
       traits: savedTraits.map(t => ({ traitName: t.traitName, confidence: t.confidence, evidence: t.evidence })),
     };
 

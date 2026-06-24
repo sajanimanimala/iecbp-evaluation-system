@@ -8,10 +8,61 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function EvaluatorDashboardPage() {
     const router = useRouter();
     const [submissions, setSubmissions] = useState([]);
+    const [rejectComment, setRejectComment] = useState('');
+    const [rejectSubmissionId, setRejectSubmissionId] = useState(null);
+    const [rejectReason, setRejectReason] = useState('');
+    const [selectedSubmission, setSelectedSubmission] = useState(null);
+    const [showRejectBox, setShowRejectBox] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortDir, setSortDir] = useState('desc');
     const [user, setUser] = useState(() => getAuthUser());
+    const updateReportStatus = async (
+   submissionId,
+   action,
+   comment = ''
+) => {
+    try {
+        const reportRes = await fetch(
+            `/api/reports/submission/${submissionId}`
+        );
+
+        const reportData = await reportRes.json();
+
+        if (!reportData.success) {
+            alert('Report not found');
+            return;
+        }
+
+        const reviewRes = await fetch('/api/reports/review', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+           body: JSON.stringify({
+   reportId: reportData.report.id,
+   action,
+   evaluatorComment: comment
+})
+        });
+
+        const result = await reviewRes.json();
+
+        if (result.success) {
+            alert(`${action} successful`);
+
+            const res = await fetch('/api/evaluator/submissions');
+            const data = await res.json();
+
+            if (data.success) {
+                setSubmissions(data.submissions);
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        alert('Operation failed');
+    }
+};
 
     useEffect(() => {
         let mounted = true;
@@ -51,7 +102,10 @@ export default function EvaluatorDashboardPage() {
             return (s.candidateCode.toLowerCase().includes(query) ||
                 s.scenario.toLowerCase().includes(query));
         })
-        .filter(s => statusFilter === 'all' ? true : s.status === statusFilter)
+        .filter(s => {
+            if (statusFilter === 'all') return true;
+            return s.status?.toUpperCase() === statusFilter.toUpperCase();
+        })
         .sort((a, b) => {
             const dateA = new Date(a.date);
             const dateB = new Date(b.date);
@@ -60,8 +114,8 @@ export default function EvaluatorDashboardPage() {
 
     const stats = {
         total: submissions.length,
-        pending: submissions.filter(s => s.status === 'pending').length,
-        approved: submissions.filter(s => s.status === 'approved').length,
+        pending: submissions.filter(s => s.status?.toUpperCase() === 'PENDING').length,
+        approved: submissions.filter(s => s.status?.toUpperCase() === 'APPROVE').length,
     };
 
     return (
@@ -226,10 +280,10 @@ export default function EvaluatorDashboardPage() {
                                     }}
                                 >
                                     <option value="all">All Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="approved">Approved</option>
-                                    <option value="modified">Modified</option>
-                                    <option value="rejected">Rejected</option>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="APPROVE">Approved</option>
+                                    <option value="MODIFY">Modified</option>
+                                    <option value="REJECT">Rejected</option>
                                 </select>
 
                                 <button
@@ -328,6 +382,17 @@ export default function EvaluatorDashboardPage() {
                                             fontSize: '11px',
                                             textTransform: 'uppercase',
                                         }}>Coverage</th>
+                                        <th style={{
+    padding: '1.25rem',
+    textAlign: 'left',
+    color: '#94A3B8',
+    fontWeight: 600,
+    letterSpacing: '0.3px',
+    fontSize: '11px',
+    textTransform: 'uppercase',
+}}>
+    Actions
+</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -375,6 +440,78 @@ export default function EvaluatorDashboardPage() {
                                                     <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
                                                         {submission.coverageIndex != null ? submission.coverageIndex : '--'}
                                                     </td>
+                                                  <td style={{ padding: '1.25rem' }}>
+  {submission.status?.toLowerCase() === 'pending' && (
+    <div
+      style={{
+        display: 'flex',
+        gap: '8px',
+        flexWrap: 'wrap'
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() =>
+          updateReportStatus(submission.id, 'APPROVE')
+        }
+        style={{
+          background: '#16a34a',
+          color: '#fff',
+          border: 'none',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '12px'
+        }}
+      >
+        Approve
+      </button>
+
+      <button
+        style={{
+          background: '#2563eb',
+          color: '#fff',
+          border: 'none',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '12px'
+        }}
+      >
+        Modify
+      </button>
+
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    setRejectSubmissionId(submission.id);
+    setShowRejectBox(true);
+  }}
+  style={{
+    background: '#dc2626',
+    color: '#fff',
+    border: 'none',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    cursor: 'pointer'
+  }}
+>
+  Reject
+</button>
+    </div>
+  )}
+
+  {submission.status?.toLowerCase() !== 'pending' && (
+    <span
+      style={{
+        color: '#94A3B8',
+        fontSize: '12px'
+      }}
+    >
+      Reviewed
+    </span>
+  )}
+</td>
                                                 </motion.tr>
                                             ))
                                         )}
@@ -395,19 +532,131 @@ export default function EvaluatorDashboardPage() {
                     </motion.div>
                 </div>
             </main>
+            {showRejectBox && (
+  <div
+    style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.7)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 9999
+    }}
+  >
+    <div
+      style={{
+        background: '#1e293b',
+        padding: '24px',
+        borderRadius: '12px',
+        width: '450px'
+      }}
+    >
+      <h3
+  style={{
+    color: '#F8FAFC',
+    marginBottom: '12px',
+    fontSize: '20px',
+    fontWeight: '600'
+  }}
+>
+  Reject Report
+</h3>
+<p
+  style={{
+    color: '#CBD5E1',
+    marginBottom: '8px',
+    fontSize: '14px'
+  }}
+>
+  Please provide a reason for rejecting this report.
+</p>
+      <textarea
+  value={rejectReason}
+  onChange={(e) => setRejectReason(e.target.value)}
+  placeholder="Enter rejection reason..."
+  style={{
+    width: '100%',
+    minHeight: '120px',
+    marginTop: '12px',
+    padding: '12px',
+    background: '#0f172a',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px',
+    color: '#F8FAFC',
+    fontSize: '14px',
+    outline: 'none',
+    resize: 'vertical'
+  }}
+/>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: '10px',
+          marginTop: '15px'
+        }}
+      >
+        <button
+  onClick={() => {
+    setShowRejectBox(false);
+    setRejectReason('');
+  }}
+  style={{
+    background: '#334155',
+    color: '#F8FAFC',
+    border: 'none',
+    padding: '8px 14px',
+    borderRadius: '6px',
+    cursor: 'pointer'
+  }}
+>
+  Cancel
+</button>
+
+        <button
+  onClick={() => {
+    updateReportStatus(
+      rejectSubmissionId,
+      'REJECT',
+      rejectReason
+    );
+
+    setShowRejectBox(false);
+    setRejectReason('');
+  }}
+  style={{
+    background: '#dc2626',
+    color: '#fff',
+    border: 'none',
+    padding: '8px 14px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: '600'
+  }}
+>
+  Confirm Reject
+</button>
+      </div>
+    </div>
+  </div>
+)}
         </div>
     );
 }
 
 function StatusBadge({ status }) {
+    const normalizedStatus = (status || '').toLowerCase();
     const statusConfig = {
         pending: { bg: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.3)', color: '#FDBA74', icon: '⏳' },
-        approved: { bg: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ADE80', icon: '✓' },
-        modified: { bg: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#A5B4FC', icon: '✎' },
-        rejected: { bg: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', icon: '✕' },
+        approve: { bg: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.3)', color: '#4ADE80', icon: '✓' },
+        modify: { bg: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', color: '#A5B4FC', icon: '✎' },
+        reject: { bg: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#FCA5A5', icon: '✕' },
     };
 
-    const config = statusConfig[status] || statusConfig.pending;
+    const config = statusConfig[normalizedStatus] || statusConfig.pending;
+    const displayLabel = (status || 'PENDING').toUpperCase();
 
     return (
         <div style={{
@@ -424,7 +673,7 @@ function StatusBadge({ status }) {
             letterSpacing: '0.3px',
         }}>
             <span>{config.icon}</span>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {displayLabel}
         </div>
     );
 }
