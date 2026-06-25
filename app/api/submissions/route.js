@@ -234,8 +234,9 @@ export async function POST(req) {
     // STEP 4 — Trigger evaluation engine
     // ─────────────────────────────────────
 
+    
     const evaluationResponse = await fetch(
-      'http://localhost:3000/api/evaluation/evaluate',
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/evaluation/evaluate`,
       {
         method: 'POST',
 
