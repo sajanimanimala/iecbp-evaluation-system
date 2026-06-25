@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function GET(req, { params }) {
+
+    
     try {
         // Try to obtain id from params (may be a Promise) or from the request pathname
         const pathname = req.nextUrl?.pathname || new URL(req.url, 'http://localhost').pathname;
