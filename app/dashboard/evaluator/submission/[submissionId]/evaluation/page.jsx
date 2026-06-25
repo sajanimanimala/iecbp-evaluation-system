@@ -246,13 +246,13 @@ export default function EvaluationDetailsPage() {
             {/* AI MISSED EVIDENCE SECTION */}
             <div style={{ background: 'linear-gradient(145deg, #2D1F3B, #3A2849)', border: '1px solid rgba(168,85,247,0.15)', borderRadius: '20px', padding: '1.75rem', boxShadow: '0 24px 60px rgba(0,0,0,0.18)' }}>
               <div style={{ marginBottom: '1.5rem' }}>
-                <h2 style={{ color: '#E9D5FF', fontSize: '1.25rem', fontWeight: 700, margin: 0, marginBottom: '0.5rem' }}>AI Missed Evidence Suggestions</h2>
+                <h2 style={{ color: '#E9D5FF', fontSize: '1.25rem', fontWeight: 700, margin: 0, marginBottom: '0.5rem' }}>Missed Evidence Suggestions</h2>
                 <p style={{ color: '#D1D5DB', fontSize: '14px', margin: 0 }}>Evidence that the AI detected but was missed by the rule-based system.</p>
               </div>
 
               {!submission?.aiMissedEvidence || submission.aiMissedEvidence.length === 0 ? (
                 <div style={{ padding: '1.5rem', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '12px', color: '#CBD5E1', textAlign: 'center' }}>
-                  No AI missed evidence suggestions available.
+                  No missed evidence suggestions available.
                 </div>
               ) : (
                 <div style={{ display: 'grid', gap: '1rem' }}>

@@ -136,11 +136,11 @@ export default function QuestionScoresPage() {
                         {/* AI MISSED EVIDENCE SECTION */}
                         <div style={{ background: 'rgba(45, 31, 59, 0.6)', borderRadius: '14px', padding: '1rem', border: '1px solid rgba(168,85,247,0.2)' }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginBottom: '0.75rem' }}>
-                            <div style={{ color: '#E9D5FF', fontWeight: 700 }}>AI Missed Evidence Suggestions</div>
+                            <div style={{ color: '#E9D5FF', fontWeight: 700 }}>Missed Evidence Suggestions</div>
                             <button onClick={() => setOpenEvidence(null)} style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '10px', color: '#E2E8F0', padding: '6px 12px', cursor: 'pointer' }}>Close</button>
                           </div>
                           {!question.aiMissedEvidence || question.aiMissedEvidence.length === 0 ? (
-                            <div style={{ color: '#94A3B8' }}>No AI missed evidence suggestions available.</div>
+                            <div style={{ color: '#94A3B8' }}>No missed evidence suggestions available.</div>
                           ) : (
                             <div style={{ display: 'grid', gap: '0.75rem' }}>
                               {question.aiMissedEvidence.map((item, index) => (
