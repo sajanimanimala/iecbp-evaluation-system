@@ -27,15 +27,18 @@ export async function POST(req) {
             }
         }
 
+        console.log("LOGIN EMAIL:", identifier);
+        console.log("USER FOUND:", user);
+
         if (!user) {
             return new Response(JSON.stringify({ message: 'Invalid email, candidate code, or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-
+        console.log("Stored Hash:", user.password);
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
             return new Response(JSON.stringify({ message: 'Invalid email, candidate code, or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-
+        console.log("PASSWORD MATCH:", match);
         // authenticated - return safe user info
         const safe = { id: user.id, email: user.email, role: user.role, name: user.name };
 
