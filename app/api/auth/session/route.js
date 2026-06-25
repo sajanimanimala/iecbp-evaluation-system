@@ -1,38 +1,27 @@
-export async function GET(req) {
-    try {
-        const cookieHeader = req.headers.get('cookie');
+import { cookies } from 'next/headers';
+const { verifyToken } = require('../../../../lib/session');
 
-        console.log("SESSION COOKIE HEADER:", cookieHeader);
+export async function GET() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('iecbp_session')?.value;
 
-        const cookies = parseCookies(cookieHeader);
-
-        console.log("PARSED COOKIES:", cookies);
-
-        const token = cookies['iecbp_session'];
-
-        console.log("SESSION TOKEN:", token);
-
-        if (!token) {
-            console.log("NO TOKEN FOUND");
-            return new Response(
-                JSON.stringify({ ok: false }),
-                { status: 401, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
-
-        const payload = verifyToken(token);
-
-        console.log("SESSION PAYLOAD:", payload);
-
-        return new Response(
-            JSON.stringify({ ok: true, user: payload }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
-    } catch (error) {
-        console.error("SESSION ERROR:", error);
-        return new Response(
-            JSON.stringify({ ok: false }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
+    if (!token) {
+      return Response.json({ ok: false }, { status: 401 });
     }
+
+    const payload = verifyToken(token);
+
+    return Response.json({
+      ok: true,
+      user: payload
+    });
+  } catch (error) {
+    console.error('SESSION ERROR:', error);
+
+    return Response.json(
+      { ok: false },
+      { status: 401 }
+    );
+  }
 }
