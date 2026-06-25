@@ -44,17 +44,51 @@ export async function POST(req) {
         }
 
         // authenticated - return safe user info
-        const safe = { id: user.id, email: user.email, role: user.role, name: user.name };
+        // authenticated - return safe user info
+const safe = {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name
+};
 
-        // sign token and set cookie
-        const token = signToken(safe);
-        const cookie = serializeCookie(token);
+// sign token and set cookie
+const token = signToken(safe);
+const cookie = serializeCookie(token);
 
-        return new Response(JSON.stringify({ ok: true, user: safe }), { status: 200, headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie } });
+// DEBUG LOGS
+console.log("LOGIN SUCCESS");
+console.log("SAFE USER:", safe);
+console.log("TOKEN:", token);
+console.log("COOKIE:", cookie);
+
+return new Response(
+    JSON.stringify({ ok: true, user: safe }),
+    {
+        status: 200,
+        headers: {
+            "Content-Type": "application/json",
+            "Set-Cookie": cookie,
+        },
+    }
+);
         console.log("LOGIN SUCCESS:",safe);
 
-    } catch (error) {
-        console.error('LOGIN ERROR', error);
-        return new Response(JSON.stringify({ message: 'Server error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
-    }
+    } 
+    catch (error) {
+    console.error("LOGIN ERROR");
+    console.error(error);
+    console.error(error.stack);
+
+    return new Response(
+        JSON.stringify({ message: "Server error" }),
+        {
+            status: 500,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        }
+    );
+}
+
 }
