@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 
-export default function AdminDashboardContent({ stats, recentActivity }) {
+export default function AdminDashboardContent({ stats, recentActivity, scenarios = [] }) {
   return (
     <div>
       <motion.div
@@ -36,6 +36,34 @@ export default function AdminDashboardContent({ stats, recentActivity }) {
           IECBP Evaluation System Administration
         </p>
       </motion.div>
+
+      {/* Scenarios + Attempts */}
+      <div style={{ marginTop: '2rem', marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#F8FAFC', margin: '0 0 0.75rem' }}>Scenarios</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
+          {scenarios.map((sc) => (
+            <div key={sc.id} style={{
+              background: 'linear-gradient(145deg, #1B273A, #22314A)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              padding: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: sc.accent ? `${sc.accent}10` : 'rgba(99,102,241,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ fontSize: '18px' }}>{sc.icon || '📘'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#F8FAFC' }}>{sc.title}</div>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '4px' }}>Attempts: {sc.attemptCount ?? 0}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div style={{
         display: 'grid',

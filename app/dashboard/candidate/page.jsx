@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import DashboardHeader from '../../../components/DashboardHeader';
+import { fetchSession, getAuthUser } from '../../../components/auth/auth';
 
 
 
@@ -18,11 +19,45 @@ export default function Home() {
             .then((res) => res.json())
             .then((data) => {
                 setScenarios(data);
+                // enrich scenarios with attempt counts for the logged-in candidate
+                enrichWithAttempts(data);
             })
             .catch((err) => {
                 console.error("Failed to load scenarios:", err);
             });
     }, []);
+
+    async function enrichWithAttempts(scenariosList) {
+        try {
+            if (!scenariosList || !scenariosList.length) return;
+
+            let session = await fetchSession();
+            // fallback to client-stored auth if server session not yet available
+            if (!session || !session.id) {
+                const local = getAuthUser();
+                if (local && local.id) session = local;
+            }
+            if (!session || !session.id) return;
+
+            const candRes = await fetch(`/api/candidates/${session.id}`);
+            if (!candRes.ok) return;
+            const candidate = await candRes.json();
+            if (!candidate || !candidate.id) return;
+
+            const counts = await Promise.all(
+                scenariosList.map((s) =>
+                    fetch(`/api/submissions/attempts?candidateId=${candidate.id}&scenarioId=${s.id}`)
+                        .then((r) => (r.ok ? r.json() : { attemptCount: 0 }))
+                        .catch(() => ({ attemptCount: 0 }))
+                )
+            );
+
+            const merged = scenariosList.map((s, i) => ({ ...s, attemptCount: counts[i]?.attemptCount ?? 0 }));
+            setScenarios(merged);
+        } catch (e) {
+            console.error('Failed loading attempt counts', e);
+        }
+    }
 
     return (
         <div style={{
@@ -276,6 +311,22 @@ function ScenarioCard({ scenario, index, isHovered, onHover, onLeave, onClick })
                     <div>
                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>{scenario.questions?.length || 0}</div>
                         <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>Questions</div>
+                    </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{
+                        width: '28px', height: '28px', borderRadius: '8px',
+                        background: 'rgba(236,72,153,0.06)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#EC4899" strokeWidth="2">
+                            <path d="M12 6v6l4 2" />
+                            <circle cx="12" cy="12" r="9" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: '#CBD5E1' }}>{scenario.attemptCount ?? 0}</div>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 500 }}>Attempts</div>
                     </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

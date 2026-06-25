@@ -64,6 +64,19 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
   const [hovered, setHovered] = useState(null);
   const options = normalizeQuestionOptions(question.options);
 
+  function cleanDisplayText(option) {
+    const text = option.text || '';
+    const disp = option.displayKey || '';
+    if (!disp) return text;
+    try {
+      const esc = disp.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const re = new RegExp(`^${esc}[\\s\\.:-]+`, 'i');
+      return String(text).replace(re, '').trim();
+    } catch (e) {
+      return String(text).trim();
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -157,7 +170,7 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}
             >
-              {option.text}
+              {cleanDisplayText(option)}
             </span>
 
             {/* Check icon when selected */}

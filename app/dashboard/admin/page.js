@@ -116,10 +116,20 @@ async function getAdminDashboardData() {
       },
     ],
     recentActivity,
+    scenarios: await (async () => {
+      try {
+        const scenarios = await prisma.scenario.findMany({ orderBy: { createdAt: 'asc' } });
+        const counts = await Promise.all(scenarios.map(s => prisma.submission.count({ where: { scenarioId: s.id } }).catch(() => 0)));
+        return scenarios.map((s, i) => ({ id: s.id, title: s.title, icon: s.icon, accent: s.accent, attemptCount: Number(counts[i] || 0) }));
+      } catch (e) {
+        console.error('Failed to load scenario attempt counts', e);
+        return [];
+      }
+    })(),
   };
 }
 export default async function AdminDashboardPage() {
   const data = await getAdminDashboardData();
-  return <AdminDashboardContent stats={data.stats} recentActivity={data.recentActivity} />;
+  return <AdminDashboardContent stats={data.stats} recentActivity={data.recentActivity} scenarios={data.scenarios} />;
 }
 

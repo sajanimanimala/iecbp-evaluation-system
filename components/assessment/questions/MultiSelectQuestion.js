@@ -66,6 +66,19 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
 
   const normalizedOptions = normalizeQuestionOptions(question.options);
 
+  function cleanDisplayText(option) {
+    const text = option.text || '';
+    const disp = option.displayKey || '';
+    if (!disp) return text;
+    try {
+      const esc = disp.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      const re = new RegExp(`^${esc}[\\s\\.:-]+`, 'i');
+      return String(text).replace(re, '').trim();
+    } catch (e) {
+      return String(text).trim();
+    }
+  }
+
   const toggle = (option) => {
     if (readOnly) return;
 
@@ -290,7 +303,7 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
                 lineHeight: 1.5, transition: 'all 0.25s ease',
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
               }}>
-                {option.text}
+                {cleanDisplayText(option)}
               </span>
 
               {/* selected position badge */}

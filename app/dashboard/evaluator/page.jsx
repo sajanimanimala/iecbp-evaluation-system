@@ -18,51 +18,51 @@ export default function EvaluatorDashboardPage() {
     const [sortDir, setSortDir] = useState('desc');
     const [user, setUser] = useState(() => getAuthUser());
     const updateReportStatus = async (
-   submissionId,
-   action,
-   comment = ''
-) => {
-    try {
-        const reportRes = await fetch(
-            `/api/reports/submission/${submissionId}`
-        );
+        submissionId,
+        action,
+        comment = ''
+    ) => {
+        try {
+            const reportRes = await fetch(
+                `/api/reports/submission/${submissionId}`
+            );
 
-        const reportData = await reportRes.json();
+            const reportData = await reportRes.json();
 
-        if (!reportData.success) {
-            alert('Report not found');
-            return;
-        }
-
-        const reviewRes = await fetch('/api/reports/review', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-           body: JSON.stringify({
-   reportId: reportData.report.id,
-   action,
-   evaluatorComment: comment
-})
-        });
-
-        const result = await reviewRes.json();
-
-        if (result.success) {
-            alert(`${action} successful`);
-
-            const res = await fetch('/api/evaluator/submissions');
-            const data = await res.json();
-
-            if (data.success) {
-                setSubmissions(data.submissions);
+            if (!reportData.success) {
+                alert('Report not found');
+                return;
             }
+
+            const reviewRes = await fetch('/api/reports/review', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    reportId: reportData.report.id,
+                    action,
+                    evaluatorComment: comment
+                })
+            });
+
+            const result = await reviewRes.json();
+
+            if (result.success) {
+                alert(`${action} successful`);
+
+                const res = await fetch('/api/evaluator/submissions');
+                const data = await res.json();
+
+                if (data.success) {
+                    setSubmissions(data.submissions);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Operation failed');
         }
-    } catch (error) {
-        console.error(error);
-        alert('Operation failed');
-    }
-};
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -117,6 +117,23 @@ export default function EvaluatorDashboardPage() {
         pending: submissions.filter(s => s.status?.toUpperCase() === 'PENDING').length,
         approved: submissions.filter(s => s.status?.toUpperCase() === 'APPROVE').length,
     };
+
+    // Compute attempt number per submission based on candidateCode + scenario grouping.
+    // This derives the ordinal (1..N) by ordering submissions by date (oldest first).
+    const attemptNumberBySubmissionId = (() => {
+        const map = new Map();
+        const groups = {};
+        for (const s of submissions) {
+            const key = `${(s.candidateCode || '').toLowerCase()}||${(s.scenario || '')}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(s);
+        }
+        for (const key of Object.keys(groups)) {
+            groups[key].sort((a, b) => new Date(a.date) - new Date(b.date));
+            groups[key].forEach((s, idx) => map.set(s.id, idx + 1));
+        }
+        return map;
+    })();
 
     return (
         <div style={{
@@ -383,16 +400,16 @@ export default function EvaluatorDashboardPage() {
                                             textTransform: 'uppercase',
                                         }}>Coverage</th>
                                         <th style={{
-    padding: '1.25rem',
-    textAlign: 'left',
-    color: '#94A3B8',
-    fontWeight: 600,
-    letterSpacing: '0.3px',
-    fontSize: '11px',
-    textTransform: 'uppercase',
-}}>
-    Actions
-</th>
+                                            padding: '1.25rem',
+                                            textAlign: 'left',
+                                            color: '#94A3B8',
+                                            fontWeight: 600,
+                                            letterSpacing: '0.3px',
+                                            fontSize: '11px',
+                                            textTransform: 'uppercase',
+                                        }}>
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -423,7 +440,8 @@ export default function EvaluatorDashboardPage() {
                                                         <div>{submission.candidateCode}</div>
                                                     </td>
                                                     <td style={{ padding: '1.25rem', color: '#CBD5E1' }}>
-                                                        {submission.scenario}
+                                                        <div>{submission.scenario}</div>
+                                                        <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '6px' }}>Attempt #{attemptNumberBySubmissionId.get(submission.id) ?? 1}</div>
                                                     </td>
                                                     <td style={{ padding: '1.25rem', color: '#CBD5E1' }}>
                                                         {new Date(submission.date).toLocaleDateString()} {new Date(submission.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -440,78 +458,78 @@ export default function EvaluatorDashboardPage() {
                                                     <td style={{ padding: '1.25rem', color: '#F8FAFC', fontWeight: 500 }}>
                                                         {submission.coverageIndex != null ? submission.coverageIndex : '--'}
                                                     </td>
-                                                  <td style={{ padding: '1.25rem' }}>
-  {submission.status?.toLowerCase() === 'pending' && (
-    <div
-      style={{
-        display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap'
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button
-        onClick={() =>
-          updateReportStatus(submission.id, 'APPROVE')
-        }
-        style={{
-          background: '#16a34a',
-          color: '#fff',
-          border: 'none',
-          padding: '6px 12px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '12px'
-        }}
-      >
-        Approve
-      </button>
+                                                    <td style={{ padding: '1.25rem' }}>
+                                                        {submission.status?.toLowerCase() === 'pending' && (
+                                                            <div
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    gap: '8px',
+                                                                    flexWrap: 'wrap'
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                <button
+                                                                    onClick={() =>
+                                                                        updateReportStatus(submission.id, 'APPROVE')
+                                                                    }
+                                                                    style={{
+                                                                        background: '#16a34a',
+                                                                        color: '#fff',
+                                                                        border: 'none',
+                                                                        padding: '6px 12px',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px'
+                                                                    }}
+                                                                >
+                                                                    Approve
+                                                                </button>
 
-      <button
-        style={{
-          background: '#2563eb',
-          color: '#fff',
-          border: 'none',
-          padding: '6px 12px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '12px'
-        }}
-      >
-        Modify
-      </button>
+                                                                <button
+                                                                    style={{
+                                                                        background: '#2563eb',
+                                                                        color: '#fff',
+                                                                        border: 'none',
+                                                                        padding: '6px 12px',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer',
+                                                                        fontSize: '12px'
+                                                                    }}
+                                                                >
+                                                                    Modify
+                                                                </button>
 
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    setRejectSubmissionId(submission.id);
-    setShowRejectBox(true);
-  }}
-  style={{
-    background: '#dc2626',
-    color: '#fff',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    cursor: 'pointer'
-  }}
->
-  Reject
-</button>
-    </div>
-  )}
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setRejectSubmissionId(submission.id);
+                                                                        setShowRejectBox(true);
+                                                                    }}
+                                                                    style={{
+                                                                        background: '#dc2626',
+                                                                        color: '#fff',
+                                                                        border: 'none',
+                                                                        padding: '6px 12px',
+                                                                        borderRadius: '6px',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </div>
+                                                        )}
 
-  {submission.status?.toLowerCase() !== 'pending' && (
-    <span
-      style={{
-        color: '#94A3B8',
-        fontSize: '12px'
-      }}
-    >
-      Reviewed
-    </span>
-  )}
-</td>
+                                                        {submission.status?.toLowerCase() !== 'pending' && (
+                                                            <span
+                                                                style={{
+                                                                    color: '#94A3B8',
+                                                                    fontSize: '12px'
+                                                                }}
+                                                            >
+                                                                Reviewed
+                                                            </span>
+                                                        )}
+                                                    </td>
                                                 </motion.tr>
                                             ))
                                         )}
@@ -533,115 +551,115 @@ export default function EvaluatorDashboardPage() {
                 </div>
             </main>
             {showRejectBox && (
-  <div
-    style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(0,0,0,0.7)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999
-    }}
-  >
-    <div
-      style={{
-        background: '#1e293b',
-        padding: '24px',
-        borderRadius: '12px',
-        width: '450px'
-      }}
-    >
-      <h3
-  style={{
-    color: '#F8FAFC',
-    marginBottom: '12px',
-    fontSize: '20px',
-    fontWeight: '600'
-  }}
->
-  Reject Report
-</h3>
-<p
-  style={{
-    color: '#CBD5E1',
-    marginBottom: '8px',
-    fontSize: '14px'
-  }}
->
-  Please provide a reason for rejecting this report.
-</p>
-      <textarea
-  value={rejectReason}
-  onChange={(e) => setRejectReason(e.target.value)}
-  placeholder="Enter rejection reason..."
-  style={{
-    width: '100%',
-    minHeight: '120px',
-    marginTop: '12px',
-    padding: '12px',
-    background: '#0f172a',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '8px',
-    color: '#F8FAFC',
-    fontSize: '14px',
-    outline: 'none',
-    resize: 'vertical'
-  }}
-/>
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.7)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999
+                    }}
+                >
+                    <div
+                        style={{
+                            background: '#1e293b',
+                            padding: '24px',
+                            borderRadius: '12px',
+                            width: '450px'
+                        }}
+                    >
+                        <h3
+                            style={{
+                                color: '#F8FAFC',
+                                marginBottom: '12px',
+                                fontSize: '20px',
+                                fontWeight: '600'
+                            }}
+                        >
+                            Reject Report
+                        </h3>
+                        <p
+                            style={{
+                                color: '#CBD5E1',
+                                marginBottom: '8px',
+                                fontSize: '14px'
+                            }}
+                        >
+                            Please provide a reason for rejecting this report.
+                        </p>
+                        <textarea
+                            value={rejectReason}
+                            onChange={(e) => setRejectReason(e.target.value)}
+                            placeholder="Enter rejection reason..."
+                            style={{
+                                width: '100%',
+                                minHeight: '120px',
+                                marginTop: '12px',
+                                padding: '12px',
+                                background: '#0f172a',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                color: '#F8FAFC',
+                                fontSize: '14px',
+                                outline: 'none',
+                                resize: 'vertical'
+                            }}
+                        />
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          gap: '10px',
-          marginTop: '15px'
-        }}
-      >
-        <button
-  onClick={() => {
-    setShowRejectBox(false);
-    setRejectReason('');
-  }}
-  style={{
-    background: '#334155',
-    color: '#F8FAFC',
-    border: 'none',
-    padding: '8px 14px',
-    borderRadius: '6px',
-    cursor: 'pointer'
-  }}
->
-  Cancel
-</button>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'flex-end',
+                                gap: '10px',
+                                marginTop: '15px'
+                            }}
+                        >
+                            <button
+                                onClick={() => {
+                                    setShowRejectBox(false);
+                                    setRejectReason('');
+                                }}
+                                style={{
+                                    background: '#334155',
+                                    color: '#F8FAFC',
+                                    border: 'none',
+                                    padding: '8px 14px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Cancel
+                            </button>
 
-        <button
-  onClick={() => {
-    updateReportStatus(
-      rejectSubmissionId,
-      'REJECT',
-      rejectReason
-    );
+                            <button
+                                onClick={() => {
+                                    updateReportStatus(
+                                        rejectSubmissionId,
+                                        'REJECT',
+                                        rejectReason
+                                    );
 
-    setShowRejectBox(false);
-    setRejectReason('');
-  }}
-  style={{
-    background: '#dc2626',
-    color: '#fff',
-    border: 'none',
-    padding: '8px 14px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: '600'
-  }}
->
-  Confirm Reject
-</button>
-      </div>
-    </div>
-  </div>
-)}
+                                    setShowRejectBox(false);
+                                    setRejectReason('');
+                                }}
+                                style={{
+                                    background: '#dc2626',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '8px 14px',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    fontWeight: '600'
+                                }}
+                            >
+                                Confirm Reject
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -147,9 +147,10 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
       <audio
         ref={audioRef}
         preload="metadata"
-        controls
         playsInline
         src={audioSrc}
+        style={{ display: 'none' }}
+        aria-hidden="true"
       >
         <source src={audioSrc} type="audio/mpeg" />
       </audio>
