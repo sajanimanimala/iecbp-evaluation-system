@@ -39,7 +39,8 @@ export default function AudioQuestion({ question, value, onChange, readOnly = fa
   const transcriptLines = Array.isArray(question.transcript) ? question.transcript : [];
 
   const audioSrc = resolveAudioSrc(question);
-  console.log('audioSrc', audioSrc);
+  console.log('Audio question raw:', question);
+  console.log('Resolved audioSrc ->', audioSrc);
 
   const answer = value?.response || '';
 

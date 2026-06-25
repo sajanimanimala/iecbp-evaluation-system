@@ -11,37 +11,60 @@ const OPTION_COLORS = {
   F: { base: '#FBBF24', bg: 'rgba(251,191,36,0.09)', border: 'rgba(251,191,36,0.38)', glow: 'rgba(251,191,36,0.2)' },
 };
 
+function normalizeQuestionOptions(options = []) {
+  const seenKeys = new Set();
+
+  return Array.isArray(options)
+    ? options.map((option, index) => {
+      let key;
+      let text;
+      let icon;
+
+      if (typeof option === 'string') {
+        const trimmed = option.trim();
+        text = trimmed || `Option ${index + 1}`;
+        key = trimmed ? trimmed[0].toUpperCase() : String.fromCharCode(65 + index);
+      } else if (option && typeof option === 'object') {
+        text = option.text ?? option.label ?? option.optionText ?? option.value ?? option.title ?? `Option ${index + 1}`;
+        const rawKey = option.key ?? option.value ?? option.id ?? String.fromCharCode(65 + index);
+        key = String(rawKey).trim().toUpperCase();
+        icon = option.icon;
+      } else {
+        text = `Option ${index + 1}`;
+        key = String.fromCharCode(65 + index);
+      }
+
+      let normalizedKey = key ? String(key).trim().toUpperCase() : String.fromCharCode(65 + index);
+      if (!normalizedKey) normalizedKey = String.fromCharCode(65 + index);
+
+      if (seenKeys.has(normalizedKey)) {
+        let suffix = 2;
+        let candidate = `${normalizedKey}-${suffix}`;
+        while (seenKeys.has(candidate)) {
+          suffix += 1;
+          candidate = `${normalizedKey}-${suffix}`;
+        }
+        normalizedKey = candidate;
+      }
+
+      seenKeys.add(normalizedKey);
+
+      return {
+        key: normalizedKey,
+        displayKey: index < 26 ? String.fromCharCode(65 + index) : String(index + 1),
+        text: typeof text === 'string' ? text.trim() : String(text),
+        icon,
+      };
+    })
+    : [];
+}
+
 export default function MultiSelectQuestion({ question, value, onChange, readOnly = false }) {
   const selected = Array.isArray(value) ? value : (typeof value === 'string' ? [value] : []);
   const max = Number.isFinite(question.maxSelections) ? question.maxSelections : 2;
   const atMax = selected.length >= max;
 
-  const normalizedOptions = Array.isArray(question.options)
-    ? question.options.map((option, index) => {
-        if (typeof option === 'string') {
-          const text = option.trim();
-          return {
-            key: text || String.fromCharCode(65 + index),
-            text,
-          };
-        }
-
-        if (option && typeof option === 'object') {
-          const text = option.text ?? option.label ?? option.optionText ?? option.value ?? option.title ?? `Option ${index + 1}`;
-          const key = option.key ?? option.value ?? option.id ?? String.fromCharCode(65 + index);
-          return {
-            key: String(key).trim().toUpperCase() || String.fromCharCode(65 + index),
-            text: typeof text === 'string' ? text.trim() : String(text),
-            icon: option.icon,
-          };
-        }
-
-        return {
-          key: String.fromCharCode(65 + index),
-          text: `Option ${index + 1}`,
-        };
-      })
-    : [];
+  const normalizedOptions = normalizeQuestionOptions(question.options);
 
   const toggle = (option) => {
     if (readOnly) return;
@@ -184,8 +207,8 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
                 background: isSelected
                   ? colors.bg
                   : isDisabled
-                  ? 'rgba(15,22,35,0.5)'
-                  : 'rgba(22,32,50,0.7)',
+                    ? 'rgba(15,22,35,0.5)'
+                    : 'rgba(22,32,50,0.7)',
                 border: isSelected
                   ? `1.5px solid ${colors.border}`
                   : '1px solid rgba(255,255,255,0.06)',
@@ -255,7 +278,7 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
                   color: isSelected ? colors.base : '#475569',
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}>
-                  {option.key}
+                  {option.displayKey}
                 </span>
               </div>
 
@@ -311,8 +334,8 @@ export default function MultiSelectQuestion({ question, value, onChange, readOnl
           {atMax
             ? `${max} options selected — ready to continue`
             : selected.length > 0
-            ? `${selected.length} of ${max} selected — pick ${max - selected.length} more`
-            : `Select ${max} areas to continue`}
+              ? `${selected.length} of ${max} selected — pick ${max - selected.length} more`
+              : `Select ${max} areas to continue`}
         </span>
       </div>
     </motion.div>

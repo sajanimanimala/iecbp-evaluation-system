@@ -45,5 +45,17 @@ export default async function AssessmentPage({ params }) {
     notFound();
   }
 
+  // Log raw audio/video question objects fetched from Prisma for debugging
+  try {
+    const mediaQuestions = (scenario.questions || []).filter((q) => {
+      const t = String(q.questionType ?? q.type ?? '').toLowerCase();
+      return t.includes('audio') || t.includes('video') || Boolean(q.audioSrc || q.audioUrl || q.videoSrc || q.videoUrl);
+    });
+    // Server-side log
+    console.log('Raw media questions from Prisma for scenario', scenarioId, mediaQuestions);
+  } catch (e) {
+    console.log('Failed to log media questions', e);
+  }
+
   return <DynamicAssessmentClient scenario={scenario} questions={scenario.questions} />;
 }

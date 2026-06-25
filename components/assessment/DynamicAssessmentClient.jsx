@@ -31,6 +31,9 @@ function normalizeQuestionType(rawType) {
     drag_rank: 'drag_rank',
     draganddropranking: 'drag_rank',
     drag_drop: 'drag_rank',
+    drag_drop_ranking: 'drag_rank',
+    drag_and_drop: 'drag_rank',
+    drag_and_drop_ranking: 'drag_rank',
     audio: 'audio',
     audio_response: 'audio',
     video: 'video',
@@ -172,20 +175,33 @@ function normalizeQuestion(question, index) {
     baseQuestion.items = normalizedItems.length > 0
       ? normalizedItems
       : mappedOptions.map((option, optionIndex) => ({
-          id: `item-${optionIndex + 1}`,
-          label: option.text || `Item ${optionIndex + 1}`,
-          icon: option.icon ?? '🧩',
-        }));
+        id: `item-${optionIndex + 1}`,
+        label: option.text || `Item ${optionIndex + 1}`,
+        icon: option.icon ?? '🧩',
+      }));
   }
 
   if (normalizedType === 'audio') {
-    baseQuestion.audioSrc = question.audioSrc || question.audioUrl || question.meta?.audioSrc || question.config?.audioSrc || '/audios/default.mp3';
+    // preserve raw candidate for logging and normalize to a usable URL on the client
+    const rawAudio = question.audioSrc || question.audioUrl || question.src || question.url || question.mediaUrl || question.mediaSrc || question.meta?.audioSrc || question.config?.audioSrc;
+    baseQuestion._rawAudio = rawAudio;
+    baseQuestion.audioSrc = typeof rawAudio === 'string' && rawAudio.trim()
+      ? rawAudio.trim()
+      : (question.scenarioId || question.scenario_id) && (question.number || question.orderNo)
+        ? `/audios/scenario${question.scenarioId ?? question.scenario_id}-q${question.number ?? question.orderNo}.mp3`
+        : '/audios/default.mp3';
     baseQuestion.transcript = Array.isArray(question.transcript) ? question.transcript : [];
     baseQuestion.placeholder = baseQuestion.placeholder || 'Describe what you heard...';
   }
 
   if (normalizedType === 'video') {
-    baseQuestion.videoSrc = question.videoSrc || question.videoUrl || question.meta?.videoSrc || question.config?.videoSrc || '/videos/default.mp4';
+    const rawVideo = question.videoSrc || question.videoUrl || question.src || question.url || question.mediaUrl || question.mediaSrc || question.meta?.videoSrc || question.config?.videoSrc;
+    baseQuestion._rawVideo = rawVideo;
+    baseQuestion.videoSrc = typeof rawVideo === 'string' && rawVideo.trim()
+      ? rawVideo.trim()
+      : (question.scenarioId || question.scenario_id) && (question.number || question.orderNo)
+        ? `/videos/scenario${question.scenarioId ?? question.scenario_id}-q${question.number ?? question.orderNo}.mp4`
+        : '/videos/default.mp4';
     baseQuestion.videoDescription = question.videoDescription || question.meta?.videoDescription || question.config?.videoDescription || 'Watch the scenario video to inform your response.';
     baseQuestion.videoNote = question.videoNote || question.meta?.videoNote || question.config?.videoNote || 'Scenario video reference';
     baseQuestion.placeholder = baseQuestion.placeholder || 'Describe what you observed...';

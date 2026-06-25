@@ -3,6 +3,55 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 
+function normalizeQuestionOptions(options = []) {
+  const seenKeys = new Set();
+
+  return Array.isArray(options)
+    ? options.map((option, index) => {
+      let key;
+      let text;
+      let icon;
+
+      if (typeof option === 'string') {
+        const trimmed = option.trim();
+        text = trimmed || `Option ${index + 1}`;
+        key = trimmed ? trimmed[0].toUpperCase() : String.fromCharCode(65 + index);
+      } else if (option && typeof option === 'object') {
+        text = option.text ?? option.label ?? option.optionText ?? option.value ?? option.title ?? `Option ${index + 1}`;
+        const rawKey = option.key ?? option.value ?? option.id ?? String.fromCharCode(65 + index);
+        key = String(rawKey).trim().toUpperCase();
+        icon = option.icon;
+      } else {
+        text = `Option ${index + 1}`;
+        key = String.fromCharCode(65 + index);
+      }
+
+      const normalizedText = typeof text === 'string' ? text.trim() || `Option ${index + 1}` : String(text || `Option ${index + 1}`);
+      let normalizedKey = key ? String(key).trim().toUpperCase() : String.fromCharCode(65 + index);
+      if (!normalizedKey) normalizedKey = String.fromCharCode(65 + index);
+
+      if (seenKeys.has(normalizedKey)) {
+        let suffix = 2;
+        let candidate = `${normalizedKey}-${suffix}`;
+        while (seenKeys.has(candidate)) {
+          suffix += 1;
+          candidate = `${normalizedKey}-${suffix}`;
+        }
+        normalizedKey = candidate;
+      }
+
+      seenKeys.add(normalizedKey);
+
+      return {
+        key: normalizedKey,
+        displayKey: index < 26 ? String.fromCharCode(65 + index) : String(index + 1),
+        text: normalizedText,
+        icon,
+      };
+    })
+    : [];
+}
+
 const OPTION_COLORS = {
   A: { base: '#60A5FA', bg: 'rgba(96,165,250,0.08)', border: 'rgba(96,165,250,0.35)', glow: 'rgba(96,165,250,0.2)' },
   B: { base: '#A78BFA', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.35)', glow: 'rgba(167,139,250,0.2)' },
@@ -13,7 +62,7 @@ const OPTION_COLORS = {
 
 export default function MCQQuestion({ question, value, onChange, readOnly = false }) {
   const [hovered, setHovered] = useState(null);
-  const options = Array.isArray(question.options) ? question.options : [];
+  const options = normalizeQuestionOptions(question.options);
 
   return (
     <motion.div
@@ -45,21 +94,21 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
               background: selected
                 ? colors.bg
                 : isHov
-                ? 'rgba(255,255,255,0.04)'
-                : 'rgba(22,32,50,0.7)',
+                  ? 'rgba(255,255,255,0.04)'
+                  : 'rgba(22,32,50,0.7)',
               border: selected
                 ? `1.5px solid ${colors.border}`
                 : isHov
-                ? '1px solid rgba(255,255,255,0.12)'
-                : '1px solid rgba(255,255,255,0.06)',
+                  ? '1px solid rgba(255,255,255,0.12)'
+                  : '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px',
               cursor: readOnly ? 'not-allowed' : 'pointer',
               transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: selected
                 ? `0 0 28px ${colors.glow}, 0 8px 24px rgba(0,0,0,0.2)`
                 : isHov
-                ? '0 8px 24px rgba(0,0,0,0.2)'
-                : '0 2px 12px rgba(0,0,0,0.15)',
+                  ? '0 8px 24px rgba(0,0,0,0.2)'
+                  : '0 2px 12px rgba(0,0,0,0.15)',
               position: 'relative', overflow: 'hidden',
             }}
           >
@@ -93,7 +142,7 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
                   fontFamily: "'Plus Jakarta Sans', sans-serif",
                 }}
               >
-                {option.key}
+                {option.displayKey}
               </span>
             </div>
 
@@ -148,7 +197,7 @@ export default function MCQQuestion({ question, value, onChange, readOnly = fals
           style={{ width: '7px', height: '7px', borderRadius: '50%' }}
         />
         <span style={{ fontSize: '12px', fontWeight: 500, color: value ? '#4ADE80' : '#475569', transition: 'color 0.3s ease' }}>
-          {value ? `Option ${value} selected` : 'Select one option to continue'}
+          {value ? `Option ${options.find((opt) => opt.key === value)?.displayKey || value} selected` : 'Select one option to continue'}
         </span>
       </div>
     </motion.div>

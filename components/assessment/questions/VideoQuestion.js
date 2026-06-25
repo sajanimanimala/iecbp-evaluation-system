@@ -36,7 +36,8 @@ export default function VideoQuestion({ question, value, onChange, readOnly = fa
 
   const answer = value?.response || '';
   const videoSrc = resolveVideoSrc(question);
-  console.log('videoSrc', videoSrc);
+  console.log('Video question raw:', question);
+  console.log('Resolved videoSrc ->', videoSrc);
   const wordCount = answer ? answer.trim().split(/\s+/).filter(Boolean).length : 0;
   const isComplete = hasWatched && answer.trim().length > 0;
 
@@ -303,8 +304,8 @@ export default function VideoQuestion({ question, value, onChange, readOnly = fa
               {isComplete
                 ? 'Analysis recorded'
                 : !hasWatched
-                ? 'Watch the video first, then share your analysis'
-                : 'Awaiting your analysis'}
+                  ? 'Watch the video first, then share your analysis'
+                  : 'Awaiting your analysis'}
             </span>
           </div>
           <span style={{ fontSize: '12px', color: '#64748B', fontVariantNumeric: 'tabular-nums' }}>
