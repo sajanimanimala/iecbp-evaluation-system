@@ -20,6 +20,9 @@ export async function POST(req) {
 
         if (isEmail) {
             user = await prisma.user.findUnique({ where: { email: identifier } });
+            console.log("EMAIL:", identifier);
+            console.log("USER:", user);
+
         } else {
             const candidate = await prisma.candidate.findUnique({ where: { candidate_code: identifier.toUpperCase() } });
             if (candidate && candidate.userId) {
@@ -35,10 +38,11 @@ export async function POST(req) {
         }
         console.log("Stored Hash:", user.password);
         const match = await bcrypt.compare(password, user.password);
+        console.log("PASSWORD MATCH:", match);
         if (!match) {
             return new Response(JSON.stringify({ message: 'Invalid email, candidate code, or password' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-        console.log("PASSWORD MATCH:", match);
+
         // authenticated - return safe user info
         const safe = { id: user.id, email: user.email, role: user.role, name: user.name };
 
@@ -47,6 +51,7 @@ export async function POST(req) {
         const cookie = serializeCookie(token);
 
         return new Response(JSON.stringify({ ok: true, user: safe }), { status: 200, headers: { 'Content-Type': 'application/json', 'Set-Cookie': cookie } });
+        console.log("LOGIN SUCCESS:",safe);
 
     } catch (error) {
         console.error('LOGIN ERROR', error);
