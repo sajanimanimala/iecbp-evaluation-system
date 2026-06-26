@@ -22,15 +22,25 @@ async function validateSession(req: NextRequest) {
         const origin = req.nextUrl.origin;
         const cookie = req.headers.get('cookie') || '';
 
+        console.log('[middleware] validating session for', req.nextUrl.pathname);
+        console.log('[middleware] cookie present:', Boolean(cookie));
+
         const res = await fetch(`${origin}/api/auth/session`, {
             headers: { cookie },
         });
 
+        console.log('[middleware] session response status:', res.status);
+
         if (!res.ok) return null;
         const body = await res.json();
-        if (body && body.ok && body.user) return body.user;
+        if (body && body.ok && body.user) {
+            console.log('[middleware] session user found:', body.user.email || body.user.role || 'unknown');
+            return body.user;
+        }
+        console.log('[middleware] session response missing valid user');
         return null;
     } catch (e) {
+        console.error('[middleware] session validation error:', e);
         return null;
     }
 }
@@ -38,44 +48,58 @@ async function validateSession(req: NextRequest) {
 export async function middleware(req: NextRequest) {
     const pathname = req.nextUrl.pathname;
 
+    console.log('[TRACE] middleware entered', { pathname, url: req.url, method: req.method });
+
     // Validate session by calling internal session endpoint
     const user = await validateSession(req);
 
     if (!user) {
+        console.log('[TRACE] middleware redirect -> /login', { reason: 'validateSession returned no user', pathname, url: req.url });
         // Not authenticated -> redirect to login
         const loginUrl = new URL('/login', req.url);
         return NextResponse.redirect(loginUrl);
     }
 
     const role: string = user.role || '';
+    console.log('[TRACE] middleware authenticated role', { pathname, role, userId: user.id });
 
     // Authorization enforcement for admin/evaluator/candidate specific routes
     // Admin-only
     if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard/admin')) {
+        console.log('[middleware] checking admin access');
         if (role !== 'ADMIN') {
             const redirect = ROLE_REDIRECT_MAP[role] || '/login';
+            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'admin-role-mismatch' });
             return NextResponse.redirect(new URL(redirect, req.url));
         }
+        console.log('[middleware] admin access granted');
     }
 
     // Evaluator-only
     if (pathname.startsWith('/evaluator') || pathname.startsWith('/dashboard/evaluator')) {
+        console.log('[middleware] checking evaluator access');
         if (role !== 'EVALUATOR') {
             const redirect = ROLE_REDIRECT_MAP[role] || '/login';
+            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'evaluator-role-mismatch' });
             return NextResponse.redirect(new URL(redirect, req.url));
         }
+        console.log('[middleware] evaluator access granted');
     }
 
     // Candidate-only dashboard
     if (pathname.startsWith('/dashboard/candidate')) {
+        console.log('[middleware] checking candidate access');
         if (role !== 'CANDIDATE') {
             const redirect = ROLE_REDIRECT_MAP[role] || '/login';
+            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'candidate-role-mismatch' });
             return NextResponse.redirect(new URL(redirect, req.url));
         }
+        console.log('[middleware] candidate access granted');
     }
 
     // For /reports and /scenarios we require authenticated users (any role)
     // Additional role checks can be added here if needed.
+    console.log('[TRACE] middleware access granted, continuing request', { pathname });
 
     return NextResponse.next();
 }

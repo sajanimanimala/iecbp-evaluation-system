@@ -31,7 +31,10 @@ export default function LoginPage() {
                 cache: 'no-store'
             });
             const data = await res.json();
+            console.log('[TRACE] login response status', res.status);
+            console.log('[TRACE] login response body', data);
             if (!res.ok) {
+                console.log('[TRACE] login failed, staying on /login');
                 setError(data?.message || 'Login failed');
                 setLoading(false);
                 return;
@@ -39,9 +42,12 @@ export default function LoginPage() {
 
             // success: redirect based on role
             const role = data?.user?.role;
+            console.log('[TRACE] login success, role', role);
+            console.log('[TRACE] login redirect target', role === 'ADMIN' ? '/dashboard/admin' : role === 'EVALUATOR' ? '/dashboard/evaluator' : '/dashboard/candidate');
             // persist user in localStorage
             try { const { setAuthUser } = await import('../../components/auth/auth'); setAuthUser(data.user); } catch (e) { /* ignore */ }
 
+            console.log('[TRACE] calling router.push from /login to', role === 'ADMIN' ? '/dashboard/admin' : role === 'EVALUATOR' ? '/dashboard/evaluator' : '/dashboard/candidate');
             if (role === 'ADMIN') router.push('/dashboard/admin');
             else if (role === 'EVALUATOR') router.push('/dashboard/evaluator');
             else router.push('/dashboard/candidate');

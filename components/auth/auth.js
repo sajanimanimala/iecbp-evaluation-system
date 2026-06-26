@@ -37,7 +37,7 @@ export function redirectPathForRole(role) {
     }
 }
 
-export async function fetchSession() {
+/*export async function fetchSession() {
     try {
         const res = await fetch('/api/auth/session');
         if (!res.ok) return null;
@@ -48,6 +48,32 @@ export async function fetchSession() {
         }
         return null;
     } catch (e) { return null; }
+} */
+
+export async function fetchSession() {
+    try {
+        const res = await fetch('/api/auth/session', {
+            credentials: 'include',
+            cache: 'no-store',
+        });
+
+        console.log('[fetchSession] status', res.status);
+
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        console.log('[fetchSession] body', data);
+
+        if (data?.ok && data.user) {
+            setAuthUser(data.user);
+            return data.user;
+        }
+
+        return null;
+    } catch (e) {
+        console.error('[fetchSession]', e);
+        return null;
+    }
 }
 
 export async function logout() {

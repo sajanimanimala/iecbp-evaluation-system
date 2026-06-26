@@ -5,17 +5,16 @@ export async function GET() {
   try {
     const cookieStore = await cookies();
 
-    console.log("ALL COOKIES:",
-      cookieStore.getAll()
-    );
+    console.log('[TRACE] session route cookies', cookieStore.getAll());
 
     const token =
       cookieStore.get('iecbp_session')?.value;
 
-    console.log("SESSION TOKEN:", token);
+    console.log('[TRACE] session route token present', Boolean(token));
+    console.log('[TRACE] session route token value', token);
 
     if (!token) {
-      console.log("NO TOKEN FOUND");
+      console.log('[TRACE] session route -> 401', { reason: 'no token found' });
       return Response.json(
         { ok: false },
         { status: 401 }
@@ -24,8 +23,9 @@ export async function GET() {
 
     const payload = verifyToken(token);
 
-    console.log("SESSION PAYLOAD:", payload);
+    console.log('[TRACE] session route payload', payload);
 
+    console.log('[TRACE] session route -> 200', { user: payload });
     return Response.json({
       ok: true,
       user: payload
