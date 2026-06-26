@@ -2,38 +2,24 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 /**
- * Middleware: protects selected routes by validating the server session
- * and enforcing role-based authorization.
+ * Middleware: protects selected routes by validating the presence of the session cookie.
  *
  * Behavior:
- * - Calls internal /api/auth/session (server) forwarding cookies
- * - If session is valid, optionally enforces role requirements for certain paths
- * - If invalid or unauthorized, redirects to /login
+ * - If the session cookie is present, allows the request to continue.
+ * - If the session cookie is missing, redirects to /login.
  */
 
-const ROLE_REDIRECT_MAP: Record<string, string> = {
-    ADMIN: '/dashboard/admin',
-    EVALUATOR: '/dashboard/evaluator',
-    CANDIDATE: '/dashboard/candidate',
-};
-
 async function validateSession(req: NextRequest) {
-    try {
-        const hasSessionCookie = req.cookies.has('iecbp_session');
+    const hasSessionCookie = req.cookies.has('iecbp_session');
 
-        console.log('[middleware] validating session for', req.nextUrl.pathname);
-        console.log('[middleware] session cookie present:', hasSessionCookie);
+    console.log('[middleware] validating session for', req.nextUrl.pathname);
+    console.log('[middleware] session cookie present:', hasSessionCookie);
 
-        if (!hasSessionCookie) {
-            console.log('[middleware] session cookie missing');
-            return null;
-        }
-
-        return { id: 'cookie-authenticated', role: '' };
-    } catch (e) {
-        console.error('[middleware] session validation error:', e);
+    if (!hasSessionCookie) {
         return null;
     }
+
+    return { authenticated: true };
 }
 
 export async function middleware(req: NextRequest) {
@@ -51,45 +37,8 @@ export async function middleware(req: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
-    const role: string = user.role || '';
-    console.log('[TRACE] middleware authenticated role', { pathname, role, userId: user.id });
+    console.log('[TRACE] middleware authenticated', { pathname });
 
-    // Authorization enforcement for admin/evaluator/candidate specific routes
-    // Admin-only
-    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard/admin')) {
-        console.log('[middleware] checking admin access');
-        if (role !== 'ADMIN') {
-            const redirect = ROLE_REDIRECT_MAP[role] || '/login';
-            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'admin-role-mismatch' });
-            return NextResponse.redirect(new URL(redirect, req.url));
-        }
-        console.log('[middleware] admin access granted');
-    }
-
-    // Evaluator-only
-    if (pathname.startsWith('/evaluator') || pathname.startsWith('/dashboard/evaluator')) {
-        console.log('[middleware] checking evaluator access');
-        if (role !== 'EVALUATOR') {
-            const redirect = ROLE_REDIRECT_MAP[role] || '/login';
-            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'evaluator-role-mismatch' });
-            return NextResponse.redirect(new URL(redirect, req.url));
-        }
-        console.log('[middleware] evaluator access granted');
-    }
-
-    // Candidate-only dashboard
-    if (pathname.startsWith('/dashboard/candidate')) {
-        console.log('[middleware] checking candidate access');
-        if (role !== 'CANDIDATE') {
-            const redirect = ROLE_REDIRECT_MAP[role] || '/login';
-            console.log('[TRACE] redirect', { from: pathname, to: redirect, reason: 'candidate-role-mismatch' });
-            return NextResponse.redirect(new URL(redirect, req.url));
-        }
-        console.log('[middleware] candidate access granted');
-    }
-
-    // For /reports and /scenarios we require authenticated users (any role)
-    // Additional role checks can be added here if needed.
     console.log('[TRACE] middleware access granted, continuing request', { pathname });
 
     return NextResponse.next();
