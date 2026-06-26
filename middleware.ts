@@ -19,26 +19,17 @@ const ROLE_REDIRECT_MAP: Record<string, string> = {
 
 async function validateSession(req: NextRequest) {
     try {
-        const origin = req.nextUrl.origin;
-        const cookie = req.headers.get('cookie') || '';
+        const hasSessionCookie = req.cookies.has('iecbp_session');
 
         console.log('[middleware] validating session for', req.nextUrl.pathname);
-        console.log('[middleware] cookie present:', Boolean(cookie));
+        console.log('[middleware] session cookie present:', hasSessionCookie);
 
-        const res = await fetch(`${origin}/api/auth/session`, {
-            headers: { cookie },
-        });
-
-        console.log('[middleware] session response status:', res.status);
-
-        if (!res.ok) return null;
-        const body = await res.json();
-        if (body && body.ok && body.user) {
-            console.log('[middleware] session user found:', body.user.email || body.user.role || 'unknown');
-            return body.user;
+        if (!hasSessionCookie) {
+            console.log('[middleware] session cookie missing');
+            return null;
         }
-        console.log('[middleware] session response missing valid user');
-        return null;
+
+        return { id: 'cookie-authenticated', role: '' };
     } catch (e) {
         console.error('[middleware] session validation error:', e);
         return null;
